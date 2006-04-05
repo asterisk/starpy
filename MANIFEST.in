@@ -1,0 +1,25 @@
+include MANIFEST.in
+include license.txt
+include *.py
+include doc/*
+include doc/style/*
+include doc/pydoc/*.py
+include doc/pydoc/*.html
+include examples/*.conf
+
+global-exclude starpy.conf
+global-exclude *CVS*
+global-exclude *Cvs*
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pdb
+global-exclude *.db
+global-exclude *.max
+global-exclude *.gz
+global-exclude *.zip
+global-exclude *.bat
+global-exclude *.profile
+global-exclude *.directory
+global-exclude *.cvsignore
+global-exclude *.ttf
+global-exclude core.*

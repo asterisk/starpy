@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>Autosurvey Demo Application</title>
+</head>
+<body>
+<h1>Autosurvey Demo Application</h1>
+<p>This demonstration shows how to use StarPy to construct a simple
+automated phone-survey application for use in polling group members
+regarding decisions which need to be made.</p>
+<p>Features:</p>
+<ul>
+  <li>Enter set of phone numbers or SIP addresses to contact</li>
+  <li>The owner of the survey is called</li>
+  <ul>
+    <li>Owner can record the options</li>
+    <li>Owner can view/listen to the options from the web-form</li>
+  </ul>
+  <li>Each user is called and presented with the survey</li>
+  <li>Results of the survey can be viewed on the web-form<br>
+  </li>
+</ul>
+<h2>Setup<br>
+</h2>
+<p>Enter your phone number here:</p>
+<form enctype="multipart/form-data" method="post" action="/record"
+ name="record">
+<p><input name="ownerName" value="mike"><input
+ name="recordOptions" value="Record Survey" type="submit"></p>
+</form>
+<p>The survey server will call you to record the survey options...</p>
+<h3>Introduction</h3>
+<h3>Options</h3>
+<p>Enter the participant's phone numbers here:</p>
+<p><textarea cols="30" rows="4" name="participants"></textarea></p>
+<h2>Results</h2>
+</body>
+</html>

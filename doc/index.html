@@ -1,0 +1,317 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" href="style/sitestyle.css">
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>StarPy Asterisk Protocols for Twisted</title>
+</head>
+<body>
+<h1>StarPy
+Asterisk Protocols for Twisted<br>
+</h1>
+<p class="introduction">StarPy
+is a Python + Twisted
+protocol that provides access to the Asterisk PBX's Manager Interface
+(AMI) and Fast Asterisk Gateway Interface (FastAGI). Together these
+allow you write both command-and-control interfaces (used, for example
+to generate new calls) and to customise user interactions from the
+dial-plan.&nbsp; You can readily write applications that use the AMI
+and FastAGI protocol together with any of the already-available Twisted
+protocols.</p>
+<p class="introduction">StarPy is primarily intended to allow Twisted
+developers to add Asterisk connectivity to their Twisted
+applications.&nbsp; It isn't really targeted at the normal AGI-writing
+populace, as it requires understanding Twisted's asynchronous
+programming model.&nbsp; That said, if you do know Twisted, it can
+readily be used to write stand-alone FastAGIs.<br>
+</p>
+<p class="technical">StarPy
+is still early in its life cycle.&nbsp; Its <a
+ href="http://www.vrplumber.com/">author</a>
+is very interested in contributions, bug reports and feedback and is
+available for extending/customisation contracts if you need more help.<br>
+</p>
+<h2>Installation</h2>
+<p>StarPy is a pure-Python
+distutils extension.&nbsp; Simply unpack the
+source archive to a temporary directory and run:</p>
+<pre>python setup.py install<br></pre>
+<p>You
+will need <a href="http://www.python.org/">Python</a> 2.3+ and
+<a href="http://twistedmatrix.com/">Twisted</a> (Core) installed.
+You'll need <a href="http://basicproperty.sourceforge.net/">BasicProperty</a>
+as well.</p>
+<p>The demonstration applications use the <a
+ href="pydoc/starpy.utilapplication.html">utilapplication</a> module,
+which uses configuration-file-based setup of the AMI and FastAGI
+servers.&nbsp; To use this, create a starpy.conf file for the current
+directory (directory from which to run an example script) or a
+~/.starpy.conf user-global file.&nbsp; Content of the configuration
+file(s) looks like this:</p>
+<pre>[AMI]<br>username=AMIUSERNAME<br>secret=AMIPASSWORD<br>server=127.0.0.1<br>port=5038<br><br>[FastAGI]<br>port=4573<br>interface=127.0.0.1<br>context=survey<br></pre>
+<p>Keep in mind that FastAGI applications are neither encrypting nor
+authenticating; you probably should not expose them on any interface
+other than local (127.0.0.1)!</p>
+<h2>Asterisk Manager Interface
+(AMI) Usage</h2>
+<p><span class="technical"></span></p>
+<p>StarPy provides most of the
+hooks you want to use on the protocol instances.&nbsp; The AMI
+client is created by a client factory, as is standard for Twisted
+operation.&nbsp; You can create a factory manually like so:</p>
+<pre>from starpy import manager<br>f = manager.AMIFactory(sys.argv[1], sys.argv[2])<br>df = f.login('server',port)</pre>
+<p>The factory takes the username
+and secret (password) for the Asterisk manager interface (note: do not
+actually pass in these values on the command-line in a real
+application, as this would expose the username and password to anyone
+on the machine).&nbsp; The deferred object returned from the login
+call will fire when the AMI connection has been established and
+authenticated.&nbsp; You register callbacks on the deferred to
+accomplish those tasks you'd like to accomplish.</p>
+<p>You will need to configure
+Asterisk to have the AMI enabled and choose the username, password and
+allowed hosts in
+/etc/asterisk/manager.conf.&nbsp; You will also need to be sure that
+the AMI user has sufficient permissions to carry out whatever AMI
+operations you want to perform:</p>
+<pre>[USERNAME]<br>secret=SECRETPASSWORD<br>permit=127.0.0.1<br>read = system,call,log,verbose,command,agent,user<br>write = system,call,log,verbose,command,agent,user</pre>
+<p>Please keep in mind that the AMI
+interface is not encrypted, so should never be run across an insecure
+network.&nbsp; If you need to run across such a network, use ssh
+tunnelling or the like to prevent eavesdropping!&nbsp; You will want to
+read up on the <a
+ href="http://www.voip-info.org/wiki/view/Asterisk+manager+API">AMI</a>
+in the voip-info Wiki.<br>
+</p>
+<p>The return value for the
+login() deferred is an <a href="pydoc/starpy.manager.html#AMIProtocol">AMIProtocol</a>
+instance.&nbsp; The various methods on the AMIProtocol generally
+handle the creation and interpretation of "Action ID" fields.&nbsp;
+The return value for most methods is an event, message or list of
+events.&nbsp; Messages and events are modeled as dictionaries with
+lower-case keys.</p>
+<p>Perhaps the most common task desired for use with the AMI Protocol
+is the creation of new calls.&nbsp; Here's a snippet showing such
+generation:</p>
+<pre>self.ami.originate( <br>	self.callbackChannel,<br>	self.ourContext, id(self), 1,<br>	timeout = 15,<br>)<br></pre>
+<p>You will likely want to ignore the results of the originate, and
+instead use an equal timeout waiting for an AGI connection to determine
+whether you have connected (the AMI originate can "succeed" without a
+successful connection, and will not tell you what channel is
+created).&nbsp; If you want to track whether you have returned from a
+particular call to originate, use a different extension for each
+originate call (you can use UtilApplication's <a
+ href="pydoc/starpy.utilapplication.html#UtilApplication-waitForCallOn">waitForCallOn</a>
+method to register a one-shot handler if you are using UtilApplication).</p>
+<p>Another common task is watching for an event of a particular type,
+for instance a "Hangup" event.&nbsp; The AMIProtocol instance has a
+method registerEvent that allows you to add a handler to be called
+whenever an event of a given type is observed.</p>
+<pre>def onChannelHangup( ami, event ):<br>	"""Deal with the hangup of an event"""<br>	if event['uniqueid'] == self.uniqueChannelId:<br>		log.info( """AMI Detected close of our channel: %s""", self.uniqueChannelId )<br>		self.stopTime = time.time()<br>		# give the user a few seconds to put down the hand-set<br>		reactor.callLater( 2, df.callback, event )<br>		self.ami.deregisterEvent( 'Hangup', onChannelHangup )<br>self.ami.registerEvent( 'Hangup', onChannelHangup )<br>return df.addCallback( self.onHangup, callbacks=5 )<br></pre>
+<p><span class="technical">Note that the registerEvent and
+deregisterEvent methods use object identity to manage the callbacks
+being stored, as a result, a method is not a good handler (since method
+objects are created and destroyed each time they are accessed) to
+choose.&nbsp; A nested function that can be passed to deregisterHandler
+is generally a better choice.&nbsp; Eventually we may use PyDispatcher
+for the registration as it has solved this problem already in a far
+more general way.</span></p>
+<p>See the
+examples/connecttoivr.py and examples/calldurationcallback.py scripts
+for sample usage of the AMIProtocol</p>
+<p><span class="technical">Note that StarPy uses floating-point seconds
+for all time values in all interfaces, </span></p>
+<span style="font-family: monospace;"></span>
+<h2>Fast Asterisk Gateway
+Interface (FastAGI) Usage</h2>
+<p>Again, most of the hooks you
+want to use are provided on the protocol instances.&nbsp; FastAGI
+is a server, and is thus created by a (non-client) factory like so:</p>
+<pre>from starpy import fastagi<br>f = fastagi.FastAGIFactory(testFunction)<br>reactor.listenTCP( 4573, f, 50, '127.0.0.1')</pre>
+<p>testFunction in the example above is the
+operation to undertake when the Asterisk Server connects to the FastAGI
+server.&nbsp; It takes a (connected) <a
+ href="pydoc/starpy.fastagi.html#FastAGIProtocol">FastAGIProtocol</a>
+instance as its only argument.</p>
+<p>This FastAGI protocol has methods available which match those <a
+ href="http://www.voip-info.org/wiki-Asterisk+AGI">AGI functions</a>
+documented in the voip-info wiki.&nbsp; Each method has basic
+documentation in the automated reference linked above, but you will
+want to use the wiki documentation to understand the semantics of the
+calls.&nbsp; Keep in mind that the <a
+ href="pydoc/starpy.fastagi.html#FastAGIProtocol-execute">execute</a>
+method (known as exec (which is a Python keyword) in the AGI
+documentation) allows you to access <a
+ href="http://www.voip-info.org/wiki/index.php?page=Asterisk+-+documentation+of+application+commands">Asterisk
+Applications</a> as well as AGI methods.</p>
+<p>You use a FastAGI application
+from your Dial Plan like this (note: arguments do not
+appear to be passed to FastAGI scripts in Asterisk 1.2.1, unlike
+regular AGI scripts):</p>
+<pre>exten =&gt; 1000,3,AGI(agi://127.0.0.1:4573)</pre>
+<p>Please keep in mind that the
+FastAGI interface is neither encrypted nor authenticating!&nbsp; It
+should never be run across an insecure network and should never be run
+on a port that is accessible from a public network.&nbsp; Also keep in
+mind that your FastAGI process must be running already when Asterisk
+tries to connect to it, you need to code your FastAGI process to be
+robust so that it is always available to Asterisk.<br>
+</p>
+<p>See the examples directory for
+examples of FastAGI scripts.</p>
+<p><span class="technical">Note that StarPy uses floating-point seconds
+for all time values in all interfaces, </span></p>
+<h3>Sequential Operations</h3>
+The <a href="pydoc/fastagi.html#InSequence">InSequence</a>
+class allows for easily setting up multiple chained deferred processes,
+for instance when you want to play 2 or 3 sound files
+sequentially.&nbsp;
+It is used like this:
+<pre>sequence = fastagi.InSequence()<br>sequence.append( agi.setContext, agi.variables['agi_context'] )<br>sequence.append( agi.setExtension, agi.variables['agi_extension'] )<br>sequence.append( agi.setPriority, int(agi.variables['agi_priority'])+difference )<br>sequence.append( agi.finish )<br>return sequence()<br></pre>
+<p>Calling the populated sequence returns a deferred which fires when
+all elements finish, or any element fails (raise an
+exception/failure).&nbsp; The InSequence class is a trivial convenience
+that avoids needing to define a new callable function for every
+operation of a many-step operation.<br>
+</p>
+<h3>Menu Objects Usage</h3>
+<p>The FastAGI interface includes basic support for creating hierarchic
+<a href="pydoc/starpy.menu.html">IVR menus</a>.&nbsp; The purpose of
+the menuing system is to encapsulate common UI functionality at a
+higher level of abstraction than that seen in the raw FastAGI
+interface.&nbsp; Menus are defined using "model" classes which describe
+the desired features of the menu.&nbsp; An example <a
+ href="pydoc/starpy.menu.html#Menu">Menu</a> using simple single-digit <a
+ href="pydoc/starpy.menu.html#Option">Option</a> instances:</p>
+<pre>m = menu.Menu(<br>	tellInvalid = False, # don't report incorrect selections<br>	soundFile = 'atlantic',<br>	options = [<br>		menu.Option( option='0' ),<br>		menu.Option( option='#' ),<br>		menu.ExitOn( option='*' ),<br>	],<br>	maxRepetitions = 5,<br>)<br></pre>
+<p>To invoke the menu, simply call it with a FastAGI protocol instance
+as its first argument.&nbsp; The menu will repeat up to maxRepetitions
+times if an invalid or null entry is chosen.&nbsp; If tellInvalid is
+True, the menu will play an "invalid entry" message of your choosing on
+an unrecognised entry, otherwise it will ignore invalid choices.</p>
+<p>If a callable option is specified, such as <a
+ href="pydoc/starpy.menu.html#ExitOn">ExitOn</a> or <a
+ href="pydoc/starpy.menu.html#SubMenu">SubMenu</a>, the result of
+calling that option with the AGI and the selected option will be
+returned.&nbsp; This same mechanism allows for creating chained
+sub-menus like so:</p>
+<pre>menu.SubMenu( <br>	option='1',<br>	menu = menu.Menu(<br>		tellInvalid = False, # don't report incorrect selections<br>		soundFile = 'atlantic',<br>		options = [<br>			menu.Option( option='0' ),<br>			menu.Option( option='#' ),<br>			menu.ExitOn( option='*' ),<br>		],<br>	),<br>),</pre>
+<p>which can be used as an option within a higher-level menu.</p>
+<p>The return value from a Menu is a chain of [ (option, digit), ... ]
+pairs for the final option selected from the lowest-level menu.&nbsp;
+An ExitOn option triggers a return to a higher-level menu; this is not
+reported as a "final" option selection.</p>
+<p>The Menu module includes a <a
+ href="pydoc/starpy.menu.html#CollectDigits">CollectDigits</a> class
+which may be used either as a top-level Menu or as a SubMenu-wrapped
+option in a higher-level menu:</p>
+<pre>menu.SubMenu(<br>	option='2',<br>	menu = menu.CollectDigits(<br>		soundFile = 'extension',<br>		maxDigits = 5,<br>		minDigits = 3,<br>	),<br>)<br></pre>
+<p>Eventually the CollectDigits class should support review/cancel
+options on completion.</p>
+<h3>Signalling Errors from FastAGI<br>
+</h3>
+<p>The FastAGIProtocol has a method <a
+ href="pydoc/fastagi.html#FastAGIProtocol-jumpOnError">jumpOnError</a>
+which is intended to be used for implementing the common Asterisk
+application pattern of setting priority to some large value beyond the
+current value in order to indicate an error in the application.&nbsp;
+Yes, it's an ugly way to signal errors, but there it is.&nbsp; To use,
+add jumpOnError to a deferred where you want any uncaught exception to
+trigger a jump and finish the AGI connection.&nbsp; This would normally
+be the overall deferred for your entire FastAGI operation.<br>
+</p>
+<pre>df.addErrback( agi.jumpOnError, 100 )<br></pre>
+<p>If you only want to cause a particular jump on a particular
+error/exception or set of exceptions, you can pass in a (tuple of)
+error classes in the forErrors argument to which to restrict the jump:</p>
+<pre>df.addErrback( agi.jumpOnError, 50, forErrors=error.OnUnknownUser )<br></pre>
+<h2>Secondary Services</h2>
+<p>The <a href="pydoc/starpy.utilapplication.html">utilapplication</a>
+module contains a few simple classes which provide common services for
+writing AMI/FastAGI applications.&nbsp; This includes
+configuration-file setup of AMI and FastAGI services and an application
+instance that provides methods for registering to handle incoming
+FastAGI extensions.</p>
+<pre># map incoming calls to extension 's' to the given method onS<br>APPLICATION.handleCallsFor( 's', someObject.onS )</pre>
+<p>UtilApplication's agiSpecifier and amiSpecifier property point to
+automatically generated <a
+ href="pydoc/starpy.utilapplication.html#AGISpecifier">AGISpecifier</a>
+and <a href="pydoc/starpy.utilapplication.html#AMISpecifier">AMISpecifier</a>
+instances whose parameters are loaded from configuration files.&nbsp;
+The specifier instances provide methods for starting up instances
+configured by the specifier:</p>
+<pre># tell the application to run a FastAGI server which dispatches<br># to handlers registered with handleCallsFor (as above)<br>APPLICATION.agiSpecifier.run( APPLICATION.dispatchIncomingCall )<br><br># tell the application to log into the configured AMI server<br># to allow for further management operations<br>df = APPLICATION.amiSpecifier.login( <br>).addCallback( self.onAMIConnect )<br></pre>
+<h3>Simple FastAGI Application Example<br>
+</h3>
+<p>The following is the hellofastagiapp sample application, it uses the
+starpy.conf file in the current directory to control the FastAGI setup,
+and shows use of the utilapplication handleCallsFor method, which
+allows for a single FastAGI server handling many different FastAGI
+scripts (though in this case we only register a handler for one
+extension, 's'):</p>
+<pre>#! /usr/bin/env python<br>"""FastAGI server using starpy and the utility application framework<br><br>This is basically identical to hellofastagi, save that it uses the application<br>framework to allow for configuration-file-based setup of the AGI service.<br>"""<br>from twisted.internet import reactor<br>from starpy import fastagi, utilapplication<br>import logging, time<br><br>log = logging.getLogger( 'hellofastagi' )<br><br>def testFunction( agi ):<br>	"""Demonstrate simplistic use of the AGI interface with sequence of actions"""<br>	log.debug( 'testFunction' )<br>	sequence = fastagi.InSequence()<br>	sequence.append( agi.sayDateTime, time.time() )<br>	sequence.append( agi.finish )<br>	def onFailure( reason ):<br>		log.error( "Failure: %s", reason.getTraceback())<br>		agi.finish()<br>	return sequence().addErrback( onFailure )<br><br>if __name__ == "__main__":<br>	logging.basicConfig()<br>	fastagi.log.setLevel( logging.DEBUG )<br>	APPLICATION = utilapplication.UtilApplication()<br>	APPLICATION.handleCallsFor( 's', testFunction )<br>	APPLICATION.agiSpecifier.run( APPLICATION.dispatchIncomingCall )<br>	reactor.run()</pre>
+<h2>Downloads</h2>
+<ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a5.tar.gz">1.0.0.a6</a></li>
+  <ul>
+    <li>Fix bug in AMIProtocol.deregisterEvent, would remove all
+registrations in all instances<br>
+    </li>
+    <li>Add ability to register/deregister multiple events at once in
+AMIProtocol.registerEvent and deregisterEvent</li>
+  </ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a5.tar.gz">1.0.0a5</a></li>
+  <ul>
+    <li>Setup script bug-fix for placement of data files (one directory
+level too high)</li>
+    <li>Minor documentation enhancements<br>
+    </li>
+    <li>priexhaustion.py example application added (track total number
+of open channels)</li>
+    <li>Bug-fix in AGI getVariable (incorrect/incomplete parsing)</li>
+    <li>Trivial bug-fix in hellofastagiapp.py (editing problem during
+documentation creation)</li>
+  </ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a4.tar.gz">1.0.0a4</a></li>
+  <ul>
+    <li>Fixed naming error on setPriority</li>
+    <li>Added jumpOnError</li>
+    <li>Fixes for Call Duration Sample to work with newest code</li>
+    <li>More documentation</li>
+  </ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a3.tar.gz">1.0.0a3</a></li>
+  <ul>
+    <li>FastAGI's getOption API change, should actually be useful now</li>
+    <li>IVR Menu and CollectDigits objects first release</li>
+  </ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a2.tar.gz">1.0.0a2</a></li>
+  <ul>
+    <li>Slightly more mature release, a few minor applications have
+been built with the package to test out operation, a few bugs have been
+fixed.</li>
+    <li>Call Duration sample application added, note that this requires
+      <a href="http://basicproperty.sourceforge.net/">BasicProperty</a><br>
+    </li>
+  </ul>
+  <li><a
+ href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a1.tar.gz">1.0.0a1</a></li>
+  <ul>
+    <li>Initial release of the
+StarPy package, much of the functionality is still untested, but the
+coverage of the APIs should be close to complete.</li>
+  </ul>
+</ul>
+<h2>License</h2>
+<p>StarPy is licensed under
+extremely liberal terms.<br>
+</p>
+<pre>Copyright (c) 2006, Michael C. Fletcher<br>All rights reserved.<br><br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions<br>are met:<br><br>	Redistributions of source code must retain the above copyright<br>	notice, this list of conditions and the following disclaimer.<br><br>	Redistributions in binary form must reproduce the above<br>	copyright notice, this list of conditions and the following<br>	disclaimer in the documentation and/or other materials<br>	provided with the distribution.<br><br>	The name of Michael C. Fletcher, or the name of any Contributor,<br>	may not be used to endorse or promote products derived from this <br>	software without specific prior written permission.<br><br>THIS SOFTWARE IS NOT FAULT TOLERANT AND SHOULD NOT BE USED IN ANY<br>SITUATION ENDANGERING HUMAN LIFE OR PROPERTY.<br><br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS<br>FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE<br>COPYRIGHT HOLDERS AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT,<br>INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES<br>(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR<br>SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)<br>HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,<br>STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)<br>ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED<br>OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+<p class="footer"><a href="/">vrplumber.com</a></p>
+</body>
+</html>
