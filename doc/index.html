@@ -42,7 +42,10 @@ archive</a> to a temporary directory and run:</p>
 will need <a href="http://www.python.org/">Python</a> 2.3+ and
 <a href="http://twistedmatrix.com/">Twisted</a> (Core) installed.
 You'll need <a href="http://basicproperty.sourceforge.net/">BasicProperty</a>
-as well.</p>
+as well.&nbsp; If you want to check out the SVN version instead of a
+released version, use:</p>
+<pre>svn co https://svn.sourceforge.net/svnroot/starpy/trunk starpy<br></pre>
+<p>On your PythonPath.</p>
 <p>The demonstration applications use the <a
  href="pydoc/starpy.utilapplication.html">utilapplication</a> module,
 which uses configuration-file-based setup of the AMI and FastAGI
@@ -259,6 +262,18 @@ extension, 's'):</p>
  href="https://sourceforge.net/project/showfiles.php?group_id=164040">File
 Download</a> area.</p>
 <ul>
+  <li>1.0.0.a8</li>
+  <ul>
+    <li>Fix bug in AMI handling of multi-line command results that
+include ':' characters</li>
+    <li>Add example showing usage of ami.command(...)</li>
+  </ul>
+  <li>1.0.0.a7</li>
+  <ul>
+    <li>Fix bug introduced in a6
+where None could no longer be used to
+handle all events in AMI</li>
+  </ul>
   <li>1.0.0.a6</li>
   <ul>
     <li>Fix bug in AMIProtocol.deregisterEvent, would remove all
