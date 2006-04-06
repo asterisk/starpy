@@ -70,7 +70,7 @@ from a Twisted process.""",
 	setup (
 		name = "starpy",
 		version = '1.0.0a7',
-		url = "http://www.vrplumber.com/programming/starpy",
+		url = "http://starpy.sourceforge.net",
 		description = "Twisted Protocols for interaction with the Asterisk PBX",
 		author = "Mike C. Fletcher",
 		author_email = "mcfletch@vrplumber.com",
