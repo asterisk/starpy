@@ -35,7 +35,8 @@ available for extending/customisation contracts if you need more help.<br>
 <h2>Installation</h2>
 <p>StarPy is a pure-Python
 distutils extension.&nbsp; Simply unpack the
-source archive to a temporary directory and run:</p>
+<a href="https://sourceforge.net/project/showfiles.php?group_id=164040">source
+archive</a> to a temporary directory and run:</p>
 <pre>python setup.py install<br></pre>
 <p>You
 will need <a href="http://www.python.org/">Python</a> 2.3+ and
@@ -251,10 +252,14 @@ allows for a single FastAGI server handling many different FastAGI
 scripts (though in this case we only register a handler for one
 extension, 's'):</p>
 <pre>#! /usr/bin/env python<br>"""FastAGI server using starpy and the utility application framework<br><br>This is basically identical to hellofastagi, save that it uses the application<br>framework to allow for configuration-file-based setup of the AGI service.<br>"""<br>from twisted.internet import reactor<br>from starpy import fastagi, utilapplication<br>import logging, time<br><br>log = logging.getLogger( 'hellofastagi' )<br><br>def testFunction( agi ):<br>	"""Demonstrate simplistic use of the AGI interface with sequence of actions"""<br>	log.debug( 'testFunction' )<br>	sequence = fastagi.InSequence()<br>	sequence.append( agi.sayDateTime, time.time() )<br>	sequence.append( agi.finish )<br>	def onFailure( reason ):<br>		log.error( "Failure: %s", reason.getTraceback())<br>		agi.finish()<br>	return sequence().addErrback( onFailure )<br><br>if __name__ == "__main__":<br>	logging.basicConfig()<br>	fastagi.log.setLevel( logging.DEBUG )<br>	APPLICATION = utilapplication.UtilApplication()<br>	APPLICATION.handleCallsFor( 's', testFunction )<br>	APPLICATION.agiSpecifier.run( APPLICATION.dispatchIncomingCall )<br>	reactor.run()</pre>
-<h2>Downloads</h2>
+<h2>Changes</h2>
 <ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a5.tar.gz">1.0.0.a6</a></li>
+</ul>
+<p>StarPy can be downloaded from the project's <a
+ href="https://sourceforge.net/project/showfiles.php?group_id=164040">File
+Download</a> area.</p>
+<ul>
+  <li>1.0.0.a6</li>
   <ul>
     <li>Fix bug in AMIProtocol.deregisterEvent, would remove all
 registrations in all instances<br>
@@ -262,8 +267,7 @@ registrations in all instances<br>
     <li>Add ability to register/deregister multiple events at once in
 AMIProtocol.registerEvent and deregisterEvent</li>
   </ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a5.tar.gz">1.0.0a5</a></li>
+  <li>1.0.0a5</li>
   <ul>
     <li>Setup script bug-fix for placement of data files (one directory
 level too high)</li>
@@ -275,22 +279,19 @@ of open channels)</li>
     <li>Trivial bug-fix in hellofastagiapp.py (editing problem during
 documentation creation)</li>
   </ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a4.tar.gz">1.0.0a4</a></li>
+  <li>1.0.0a4</li>
   <ul>
     <li>Fixed naming error on setPriority</li>
     <li>Added jumpOnError</li>
     <li>Fixes for Call Duration Sample to work with newest code</li>
     <li>More documentation</li>
   </ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a3.tar.gz">1.0.0a3</a></li>
+  <li>1.0.0a3</li>
   <ul>
     <li>FastAGI's getOption API change, should actually be useful now</li>
     <li>IVR Menu and CollectDigits objects first release</li>
   </ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a2.tar.gz">1.0.0a2</a></li>
+  <li>1.0.0a2</li>
   <ul>
     <li>Slightly more mature release, a few minor applications have
 been built with the package to test out operation, a few bugs have been
@@ -299,8 +300,7 @@ fixed.</li>
       <a href="http://basicproperty.sourceforge.net/">BasicProperty</a><br>
     </li>
   </ul>
-  <li><a
- href="http://www.vrplumber.com/programming/starpy/starpy-1.0.0a1.tar.gz">1.0.0a1</a></li>
+  <li>1.0.0a1</li>
   <ul>
     <li>Initial release of the
 StarPy package, much of the functionality is still untested, but the
@@ -312,6 +312,11 @@ coverage of the APIs should be close to complete.</li>
 extremely liberal terms.<br>
 </p>
 <pre>Copyright (c) 2006, Michael C. Fletcher<br>All rights reserved.<br><br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions<br>are met:<br><br>	Redistributions of source code must retain the above copyright<br>	notice, this list of conditions and the following disclaimer.<br><br>	Redistributions in binary form must reproduce the above<br>	copyright notice, this list of conditions and the following<br>	disclaimer in the documentation and/or other materials<br>	provided with the distribution.<br><br>	The name of Michael C. Fletcher, or the name of any Contributor,<br>	may not be used to endorse or promote products derived from this <br>	software without specific prior written permission.<br><br>THIS SOFTWARE IS NOT FAULT TOLERANT AND SHOULD NOT BE USED IN ANY<br>SITUATION ENDANGERING HUMAN LIFE OR PROPERTY.<br><br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS<br>FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE<br>COPYRIGHT HOLDERS AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT,<br>INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES<br>(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR<br>SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)<br>HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,<br>STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)<br>ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED<br>OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
-<p class="footer"><a href="/">vrplumber.com</a></p>
+<p class="footer"><a href="http://starpy.sourceforge.net/">StarPy</a>&nbsp;
+is a <a href="http://sourceforge.net/"> <img
+ alt="SourceForge.net Logo"
+ style="border: 0px solid ; width: 88px; height: 31px;"
+ src="http://sourceforge.net/sflogo.php?group_id=164040&amp;type=1"
+ align="middle"></a> Open-Source Project</p>
 </body>
 </html>
