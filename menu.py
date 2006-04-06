@@ -210,6 +210,12 @@ class Menu( Interaction ):
 	soundFile = common.StringLocaleProperty(
 		"soundFile", """File (name) for the pre-recorded full-menu blurb""",
 	)
+	textPrompt = common.StringProperty(
+		"textPrompt", """Textual prompt describing the option""",
+	)
+	textPrompt = common.StringProperty(
+		"textPrompt", """Textual prompt describing the option""",
+	)
 	options = common.ListProperty(
 		"options", """Set of options the user may select""",
 	)
@@ -250,8 +256,14 @@ class ExitOn( Option ):
 
 class CollectDigits( Interaction ):
 	"""Collects some number of digits (e.g. an extension) from user"""
+	textPrompt = common.StringProperty(
+		"textPrompt", """Textual prompt describing the option""",
+	)
 	soundFile = common.StringLocaleProperty(
 		"soundFile", """File (name) for the pre-recorded blurb""",
+	)
+	textPrompt = common.StringProperty(
+		"textPrompt", """Textual prompt describing the option""",
 	)
 	readBack = common.BooleanProperty(
 		"readBack", """Whether to read the entered value back to the user""",

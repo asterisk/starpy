@@ -29,7 +29,11 @@ def testFunction( agi ):
 				return df
 			return df.addCallback( onDoBeep )
 		return df.addCallback( onDateFinished )
-	return df.addCallback( onSaid ).addErrback( onFailed ).addCallbacks(
+	return df.addCallback( 
+		onSaid 
+	).addErrback( 
+		onFailed 
+	).addCallbacks(
 		cleanup, cleanup,
 	)
 
@@ -37,5 +41,5 @@ if __name__ == "__main__":
 	logging.basicConfig()
 	fastagi.log.setLevel( logging.INFO )
 	f = fastagi.FastAGIFactory(testFunction)
-	reactor.listenTCP(4573, f, 50, '127.0.0.1') # only binding on local interface
+	reactor.listenTCP(4574, f, 50, '127.0.0.1') # only binding on local interface
 	reactor.run()

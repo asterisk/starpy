@@ -69,7 +69,7 @@ from a Twisted process.""",
 	### Now the actual set up call
 	setup (
 		name = "starpy",
-		version = '1.0.0a6',
+		version = '1.0.0a7',
 		url = "http://www.vrplumber.com/programming/starpy",
 		description = "Twisted Protocols for interaction with the Asterisk PBX",
 		author = "Mike C. Fletcher",

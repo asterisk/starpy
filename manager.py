@@ -80,7 +80,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 		Multiple functions may be registered for a given event
 		"""
 		log.debug( 'Registering function %s to handle events of type %r', function, event )
-		if isinstance( event, (str,unicode)):
+		if isinstance( event, (str,unicode,type(None))):
 			event = (event,)
 		for ev in event:
 			self.eventTypeCallbacks.setdefault( ev, []).append( function )
@@ -94,7 +94,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 		returns success boolean
 		"""
 		log.debug( 'Deregistering handler %s for events of type %r', function, event )
-		if isinstance( event, (str,unicode)):
+		if isinstance( event, (str,unicode,type(None))):
 			event = (event,)
 		success = True
 		for ev in event:
@@ -172,20 +172,24 @@ class AMIProtocol(basic.LineOnlyReceiver):
 			line = self.messageCache.pop(0)
 			line = line.strip()
 			if line:
-				try:
-					key,value = line.split(':',1)
-				except ValueError, err:
-					# XXX data-safety issues, what prevents the VERSION_PREFIX from 
-					# showing up in a data-set?
+				if line.endswith( self.END_DATA ):
+					# multi-line command results...
+					message.setdefault( ' ', []).extend( [
+						l for l in line.split('\n') if (l and l!=self.END_DATA)
+					] )
+				else:
+					# regular line...
 					if line.startswith( self.VERSION_PREFIX ):
 						self.amiVersion = line[len(self.VERSION_PREFIX)+1:].strip()
 					else:
-						# data-line...
-						message.setdefault( ' ', []).extend( [
-							l for l in line.split('\n') if (l and l!=self.END_DATA)
-						] )
-				else:
-					message[ key.lower().strip() ] = value.strip()
+						try:
+							key,value = line.split(':',1)
+						except ValueError, err:
+							# XXX data-safety issues, what prevents the VERSION_PREFIX from 
+							# showing up in a data-set?
+							log.warn( """Improperly formatted line received and ignored: %r""", line )
+						else:
+							message[ key.lower().strip() ] = value.strip()
 		log.debug( 'Incoming Message: %s', message )
 		if message.has_key( 'actionid' ):
 			key = message['actionid']
