@@ -20,6 +20,7 @@ import os, logging, pprint, time
 from basicproperty import common, propertied, basic
 
 log = logging.getLogger( 'menu' )
+log.setLevel( logging.DEBUG )
 
 class Interaction( propertied.Propertied ):
 	"""Base class for user-interaction operations"""
@@ -32,6 +33,12 @@ class Interaction( propertied.Propertied ):
 		"maxRepetitions", """Maximum number of times to play before failure""",
 		defaultValue = 5,
 	)
+	onSuccess = basic.BasicProperty(
+		"onSuccess", """Optional callback for success with signature method( result, runner )""",
+	)
+	onFailure = basic.BasicProperty(
+		"onFailure", """Optional callback for failure with signature method( result, runner )""",
+	)
 	runnerClass = None
 	def __call__( self, agi, *args, **named ):
 		"""Initiate AGI-based interaction with the user"""
@@ -41,10 +48,23 @@ class Runner( propertied.Propertied ):
 	agi = basic.BasicProperty(
 		"agi", """The AGI instance we use to communicate with the user""",
 	)
+	def defaultFinalDF( prop, client ):
+		"""Produce the default finalDF with onSuccess/onFailure support"""
+		df = defer.Deferred()
+		model = client.model
+		if hasattr( model, 'onSuccess' ):
+			log.debug( 'register onSuccess', model.onSuccess )
+			df.addCallback( model.onSuccess, runner=client )
+		if hasattr( model, 'onFailure' ):
+			log.debug( 'register onFailure', model.onSuccess )
+			df.addCallback( model.onFailure, runner=client )
+		return df
 	finalDF = basic.BasicProperty(
 		"finalDF", """Final deferred we will callback/errback on success/failure""",
-		defaultFunction = lambda prop,client: defer.Deferred(),
+		defaultFunction = defaultFinalDF,
 	)
+	del defaultFinalDF
+
 	alreadyRepeated = common.IntegerProperty(
 		"alreadyRepeated", """Number of times we've repeated the message...""",
 		defaultValue = 0,
@@ -56,9 +76,11 @@ class Runner( propertied.Propertied ):
 		"""Return result of deferred to our original caller"""
 		if not self.finalDF.called:
 			self.finalDF.callback( result )
+		return result
 	def returnError( self, reason ):
 		"""Return failure of deferred to our original caller"""
-		log.error( """Failure during menu: %s""", reason.getTraceback())
+		if not isinstance( reason.value, error.MenuExit ):
+			log.warn( """Failure during menu: %s""", reason.getTraceback())
 		if not self.finalDF.called:
 			self.finalDF.errback( reason )
 
@@ -98,6 +120,7 @@ class CollectDigitsRunner( Runner ):
 		if (not digits) and (not timeout):
 			# user pressed #
 			raise error.MenuExit(
+				self.model,
 				"""User cancelled entry of digits""",
 			)
 		if not valid:
@@ -118,6 +141,28 @@ class CollectDigitsRunner( Runner ):
 		else:
 			# Yay, we got a valid response!
 			return self.returnResult( [(self, digits) ] )
+
+class CollectPasswordRunner( CollectDigitsRunner ):
+	"""Password-runner, checks validity versus expected value"""
+	expected = common.StringLocaleProperty(
+		"expected", """The value expected/required from the user for this run""",
+	)
+	def __call__( self, expected, *args, **named ):
+		"""Begin the AGI processing for the menu"""
+		self.expected = expected
+		return super( CollectPasswordRunner, self ).__call__( *args, **named )
+	def validEntry( self, digits ):
+		"""Determine whether given digits are considered a "valid" entry"""
+		for digit in self.model.escapeDigits:
+			if digit in digits:
+				raise error.MenuExit(
+					self.model,
+					"""User cancelled entry of password""",
+				)
+		if digits != self.expected:
+			return False, "Password doesn't match"
+		return True, None
+	
 
 class MenuRunner( Runner ):
 	"""User's single interaction with a given menu"""
@@ -171,8 +216,12 @@ class MenuRunner( Runner ):
 					if callable( option ):
 						# allow for chaining down into sub-menus and the like...
 						# we return the result of calling the option via self.finalDF
-						return option( pressed, self ).addCallbacks( 
+						return defer.maybeDeferred( option, pressed, self ).addCallbacks( 
 							self.returnResult, self.returnError 
+						)
+					elif hasattr(option, 'onSuccess' ):
+						return defer.maybeDeferred( option.onSuccess, pressed, self ).addCallbacks(
+							self.returnResult, self.returnError
 						)
 					else:
 						return self.returnResult( [(option,pressed),] )
@@ -256,9 +305,6 @@ class ExitOn( Option ):
 
 class CollectDigits( Interaction ):
 	"""Collects some number of digits (e.g. an extension) from user"""
-	textPrompt = common.StringProperty(
-		"textPrompt", """Textual prompt describing the option""",
-	)
 	soundFile = common.StringLocaleProperty(
 		"soundFile", """File (name) for the pre-recorded blurb""",
 	)
@@ -281,3 +327,14 @@ class CollectDigits( Interaction ):
 		defaultValue = True,
 	)
 
+class CollectPassword( CollectDigits ):
+	"""Collects some number of password digits from the user"""
+	runnerClass = CollectPasswordRunner
+	escapeDigits = common.StringLocaleProperty(
+		"escapeDigits", """Set of digits which escape from password entry""",
+		defaultValue = '',
+	)
+	soundFile = common.StringLocaleProperty(
+		"soundFile", """File (name) for the pre-recorded blurb""",
+		defaultValue = 'vm-password',
+	)
