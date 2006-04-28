@@ -161,7 +161,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		"""(Internal) Handle putative success, watch for failure-on-load problems"""
 		try:
 			digit,endposStuff = resultLine.split( ' ', 1 )
-		except ValueError, error:
+		except ValueError, err:
 			pass
 		else:
 			digit = int(digit)

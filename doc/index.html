@@ -188,7 +188,7 @@ interface.&nbsp; Menus are defined using "model" classes which describe
 the desired features of the menu.&nbsp; An example <a
  href="pydoc/starpy.menu.html#Menu">Menu</a> using simple single-digit <a
  href="pydoc/starpy.menu.html#Option">Option</a> instances:</p>
-<pre>m = menu.Menu(<br>	tellInvalid = False, # don't report incorrect selections<br>	soundFile = 'atlantic',<br>	options = [<br>		menu.Option( option='0' ),<br>		menu.Option( option='#' ),<br>		menu.ExitOn( option='*' ),<br>	],<br>	maxRepetitions = 5,<br>)<br></pre>
+<pre>m = menu.Menu(<br>	tellInvalid = False, # don't report incorrect selections<br>	prompt = 'atlantic',<br>	options = [<br>		menu.Option( option='0' ),<br>		menu.Option( option='#' ),<br>		menu.ExitOn( option='*' ),<br>	],<br>	maxRepetitions = 5,<br>)<br></pre>
 <p>To invoke the menu, simply call it with a FastAGI protocol instance
 as its first argument.&nbsp; The menu will repeat up to maxRepetitions
 times if an invalid or null entry is chosen.&nbsp; If tellInvalid is
@@ -200,8 +200,12 @@ an unrecognised entry, otherwise it will ignore invalid choices.</p>
 calling that option with the AGI and the selected option will be
 returned.&nbsp; This same mechanism allows for creating chained
 sub-menus like so:</p>
-<pre>menu.SubMenu( <br>	option='1',<br>	menu = menu.Menu(<br>		tellInvalid = False, # don't report incorrect selections<br>		soundFile = 'atlantic',<br>		options = [<br>			menu.Option( option='0' ),<br>			menu.Option( option='#' ),<br>			menu.ExitOn( option='*' ),<br>		],<br>	),<br>),</pre>
+<pre>menu.SubMenu( <br>	option='1',<br>	menu = menu.Menu(<br>		tellInvalid = False, # don't report incorrect selections<br>		prompt = ['atlantic',menu.DigitsPrompt(53),menu.DateTimePrompt(time.time())],<br>		options = [<br>			menu.Option( option='0' ),<br>			menu.Option( option='#' ),<br>			menu.ExitOn( option='*' ),<br>		],<br>	),<br>),</pre>
 <p>which can be used as an option within a higher-level menu.</p>
+<p>You can also specify an onSuccess callback in the Option, this will
+be called (and it's value returned) if and only if that specific Option
+is chosen by the user (it is called only if the Option is not itself
+callable (which regular Option instances are not)).</p>
 <p>The return value from a Menu is a chain of [ (option, digit), ... ]
 pairs for the final option selected from the lowest-level menu.&nbsp;
 An ExitOn option triggers a return to a higher-level menu; this is not
@@ -212,7 +216,9 @@ which may be used either as a top-level Menu or as a SubMenu-wrapped
 option in a higher-level menu:</p>
 <pre>menu.SubMenu(<br>	option='2',<br>	menu = menu.CollectDigits(<br>		soundFile = 'extension',<br>		maxDigits = 5,<br>		minDigits = 3,<br>	),<br>)<br></pre>
 <p>Eventually the CollectDigits class should support review/cancel
-options on completion.</p>
+options on completion.&nbsp; It would also be nice to get it to use the
+prompt system, but as of yet I don't know of any way to make that work
+with multi-character entry during the various sayXXX functions.</p>
 <h3>Signalling Errors from FastAGI<br>
 </h3>
 <p>The FastAGIProtocol has a method <a
@@ -262,8 +268,24 @@ extension, 's'):</p>
  href="https://sourceforge.net/project/showfiles.php?group_id=164040">File
 Download</a> area.</p>
 <ul>
+  <li>1.0.0.a9</li>
+  <ul>
+    <li>Add multi-element prompt capability, so you can use sound
+files, numbers, read alpha and similar operations to define a compound
+prompt for a menu.<br>
+      <br>
+Note: This change breaks all previously defined menus, you need to
+change the "soundFile" property of your menus to be "prompt".&nbsp; You
+may (but do not need to) wrap your sound file names in a
+menu.AudioPrompt() instance.</li>
+    <li>Minor bug in onStreamingComplete fixed (variable name shadowed
+the module)</li>
+  </ul>
   <li>1.0.0.a8</li>
   <ul>
+    <li>Add password-checking menu operation</li>
+    <li>Add ability to pass an "onSuccess" handler to a menu option; it
+is called before returning from selection of that option</li>
     <li>Fix bug in AMI handling of multi-line command results that
 include ':' characters</li>
     <li>Add example showing usage of ami.command(...)</li>

@@ -8,8 +8,8 @@ import os, logging, pprint, time
 log = logging.getLogger( 'menutest' )
 
 mainMenu = menu.Menu(
-	soundFile = '/home/mcfletch/starpydemo/soundfiles/menutest-toplevel',
-	#soundFile = 'houston',
+	prompt = '/home/mcfletch/starpydemo/soundfiles/menutest-toplevel',
+	#prompt = 'houston',
 	textPrompt = '''Top level of the menu test example
 	
 	Pressing Star will exit this menu at any time.
@@ -24,8 +24,8 @@ mainMenu = menu.Menu(
 		menu.SubMenu( 
 			option='1',
 			menu = menu.Menu(
-				soundFile = '/home/mcfletch/starpydemo/soundfiles/menutest-secondlevel',
-				#soundFile = 'atlantic',
+				prompt = '/home/mcfletch/starpydemo/soundfiles/menutest-secondlevel',
+				#prompt = 'atlantic',
 				textPrompt = '''A second-level menu in the menu test example
 				
 				Pressing Star will exit this menu at any time.

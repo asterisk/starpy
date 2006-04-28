@@ -43,6 +43,7 @@ class Interaction( propertied.Propertied ):
 	def __call__( self, agi, *args, **named ):
 		"""Initiate AGI-based interaction with the user"""
 		return self.runnerClass( model=self,agi=agi )( *args, **named )
+		
 class Runner( propertied.Propertied ):
 	"""User's interaction with a given Interaction-type"""
 	agi = basic.BasicProperty(
@@ -162,7 +163,6 @@ class CollectPasswordRunner( CollectDigitsRunner ):
 		if digits != self.expected:
 			return False, "Password doesn't match"
 		return True, None
-	
 
 class MenuRunner( Runner ):
 	"""User's single interaction with a given menu"""
@@ -185,15 +185,26 @@ class MenuRunner( Runner ):
 		return self.finalDF 
 	def readMenu( self, result=None ):
 		"""Read our menu to the user"""
-		soundFile = getattr( self.model, 'soundFile', None )
-		if soundFile:
-			# easiest possibility, just read out the file...
-			return self.agi.getOption( 
-				soundFile, self.escapeDigits, timeout=self.model.timeout 
-			).addCallback( self.onReadMenu ).addErrback( self.returnError )
-		else:
-			raise NotImplemented( """Haven't got non-soundfile menus working yet""" )
-	def onReadMenu( self, (pressed,position) ):
+		prompt = self.model.prompt 
+		realPrompt = []
+		for p in prompt:
+			if isinstance( p, (str,unicode)):
+				p = AudioPrompt( p )
+			elif isinstance( p, int ):
+				p = NumberPrompt( p )
+			elif not isinstance( p, Prompt ):
+				raise TypeError( """Unknown prompt element type on %r: %s"""%(
+					p, p.__class__,
+				))
+			realPrompt.append( p )
+		runner = PromptRunner( 
+			elements = realPrompt,
+			escapeDigits = self.escapeDigits,
+			agi = self.agi,
+			timeout = self.model.timeout,
+		)
+		return runner().addCallback( self.onReadMenu ).addErrback( self.returnError )
+	def onReadMenu( self, pressed ):
 		"""Deal with succesful result from reading menu"""
 		log.info( """onReadMenu: %r""", pressed )
 		if not pressed:
@@ -239,10 +250,10 @@ class MenuRunner( Runner ):
 class Menu( Interaction ):
 	"""IVR-based menu, returns options selected by the user and keypresses
 	
-	The Menu holds a collection of Option instances along with a soundFile 
+	The Menu holds a collection of Option instances along with a prompt 
 	which presents those options to the user.  The menu will attempt to 
 	collect the user's selected option up to maxRepetitions times, playing 
-	the soundFile each time.
+	the prompt each time.
 	
 	If tellInvalid is true, will allow any character being pressed to stop
 	the playback, and will tell the user if the pressed character is not 
@@ -256,11 +267,11 @@ class Menu( Interaction ):
 	Returns [(option,char(pressedKey))...] for each level of menu explored
 	"""
 	INVALID_OPTION_FILE = 'pm-invalid-option'
-	soundFile = common.StringLocaleProperty(
-		"soundFile", """File (name) for the pre-recorded full-menu blurb""",
-	)
-	textPrompt = common.StringProperty(
-		"textPrompt", """Textual prompt describing the option""",
+	prompt = common.ListProperty(
+		"prompt", """(Set of) prompts to run, can be Prompt instances or filenames
+		
+		Used by the PromptRunner to produce prompt selections
+		""",
 	)
 	textPrompt = common.StringProperty(
 		"textPrompt", """Textual prompt describing the option""",
@@ -338,3 +349,119 @@ class CollectPassword( CollectDigits ):
 		"soundFile", """File (name) for the pre-recorded blurb""",
 		defaultValue = 'vm-password',
 	)
+
+class PromptRunner( propertied.Propertied ):
+	"""Prompt formed from list of sub-prompts
+	"""
+	elements = common.ListProperty(
+		"elements", """Sub-elements of the prompt to be presented""",
+	)
+	agi = basic.BasicProperty(
+		"agi", """The FastAGI instance we're controlling""",
+	)
+	escapeDigits = common.StringLocaleProperty(
+		"escapeDigits", """Set of digits which escape from playing the prompt""",
+	)
+	timeout = common.FloatProperty(
+		"timeout", """Timeout on data-entry after completed reading""",
+	)
+	def __call__( self ):
+		"""Return a deferred that chains all of the sub-prompts in order
+		
+		Returns from the first of the sub-prompts that recevies a selection
+		
+		returns str(digit) for the key the user pressed or 
+		"""
+		return self.onNext( None )
+	def onNext( self, result, index=0 ):
+		"""Process the next operation"""
+		if result is not None:
+			return result
+		try:
+			element = self.elements[index]
+		except IndexError, err:
+			# okay, do a waitForDigit from timeout seconds...
+			return self.agi.waitForDigit( self.timeout ).addCallback(
+				self.processKey
+			).addCallback( self.processLast )
+		else:
+			df = element.read( self.agi, self.escapeDigits )
+			df.addCallback( self.processKey )
+			df.addCallback( self.onNext, index=index+1)
+			return df
+	def processKey( self, result ):
+		"""Does the pressed key belong to escapeDigits?"""
+		if isinstance( result, tuple ):
+			# getOption result...
+			if result[1] == 0:
+				# failure during load of the file...
+				log.warn( """Apparent failure during load of audio file: %s""", self.value )
+				result = 0
+			else:
+				result = result[0]
+			if isinstance( result, str ):
+				if result:
+					result = ord( result )
+				else:
+					result = 0
+		if result: # None or 0
+			# User pressed a key during the reading...
+			key = chr( result )
+			if key in self.escapeDigits:
+				log.info( 'Exiting early due to user press of: %r', key )
+				return key
+			else:
+				# we don't warn user in this menu if they press an unrecognised key!
+				log.info( 'Ignoring user keypress because not in escapeDigits: %r', key )
+			# completed reading without any escape digits, continue reading
+		return None
+	def processLast( self,result ):
+		if result is None:
+			result = ''
+		return result
+		
+class Prompt( propertied.Propertied ):
+	"""A Prompt to be read to the user"""
+	value = basic.BasicProperty(
+		"value", """Filename to be read to the user""",
+	)
+	def __init__( self, value, **named ):
+		named['value'] = value
+		super(Prompt,self).__init__( **named )
+class AudioPrompt( Prompt ):
+	"""Default type of prompt, reads a file"""
+	def read( self, agi, escapeDigits ):
+		"""Read the audio prompt to the user"""
+		# There's no "say file" operation...
+		return agi.getOption( self.value, escapeDigits, 0.001 )
+class TextPrompt( Prompt ):
+	"""Prompt produced via festival text-to-speech reader (built-in command)"""
+	def read( self, agi, escapeDigits ):
+		return agi.execute( "Festival", self.value, escapeDigits )
+class NumberPrompt( Prompt ):
+	"""Prompt that reads a number as a number"""
+	value = common.IntegerProperty(
+		"value", """Integer numeral to read""",
+	)
+	def read( self, agi, escapeDigits ):
+		"""Read the audio prompt to the user"""
+		return agi.sayNumber( self.value, escapeDigits )
+class DigitsPrompt( Prompt ):
+	"""Prompt that reads a number as digits"""
+	def read( self, agi, escapeDigits ):
+		"""Read the audio prompt to the user"""
+		return agi.sayDigits( self.value, escapeDigits )
+class AlphaPrompt( Prompt ):
+	"""Prompt that reads alphabetic string as characters"""
+	def read( self, agi, escapeDigits ):
+		"""Read the audio prompt to the user"""
+		return agi.sayAlpha( self.value, escapeDigits )
+class DateTimePrompt( Prompt ):
+	"""Prompt that reads a date/time as a date"""
+	format = basic.BasicProperty(
+		"format", """Format in which to read the date to the user""",
+		defaultValue = None
+	)
+	def read( self, agi, escapeDigits ):
+		"""Read the audio prompt to the user"""
+		return agi.sayDateTime( self.value, escapeDigits, format=self.format )
