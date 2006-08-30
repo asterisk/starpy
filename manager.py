@@ -148,7 +148,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 				)
 		def onFailure( reason ):
 			"""Handle failure to connect (e.g. due to timeout)"""
-			log.info( 'Login Call Failure: %s', message )
+			log.info( 'Login Call Failure: %s', reason.getTraceback() )
 			self.transport.loseConnection()
 			self.factory.loginDefer.errback( 
 				reason
@@ -202,7 +202,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 					# XXX log failure here...
 					pass 
 		# otherwise is a monitor message or something we didn't send...
-		elif message.has_key( 'event' ):
+		if message.has_key( 'event' ):
 			self.dispatchEvent( message )
 	def dispatchEvent( self, event ):
 		"""Given an incoming event, dispatch to registered handlers"""
@@ -312,7 +312,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 	def originate( 
 		self, channel, context=None, exten=None, priority=None,
 		timeout=None, callerid=None, account=None, application=None,
-		data=None
+		data=None, variable={}, async=False
 	):
 		"""Originate call to connect channel to given context/exten/priority
 		
@@ -324,12 +324,15 @@ class AMIProtocol(basic.LineOnlyReceiver):
 		account -- account to which the call belongs
 		application -- alternate application to Dial to use for outbound dial 
 		data -- data to pass to application
+		variable -- variables associated to the call
+		async -- make the origination asynchronous
 		"""
-		message = dict([(k,v) for (k,v) in { 
+		variable = '|'.join( [ "%s=%s" %( x[0], x[1] ) for x in variable.items() ] )
+		message = dict([(k,v) for (k,v) in {
 			'action': 'originate',
 			'channel':channel,'context':context,'exten':exten,'priority':priority,
 			'timeout':timeout,'callerid':callerid,'account':account,'application':application,
-			'data':data,
+			'data':data, 'variable':variable, 'async':str(async)
 		}.items() if v is not None])
 		if message.has_key( 'timeout' ):
 			message['timeout'] = message['timeout']*1000
