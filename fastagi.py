@@ -55,12 +55,14 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		messageCache -- stores incoming variables 
 		pendingMessages -- set of outstanding messages for which we expect 
 			replies
+		lostConnectionDeferred -- deferred firing when the connection is lost
 		delimiter -- uses bald newline instead of carriage-return-newline
 	
 	XXX Lots of problems with data-escaping, no docs on how to escape special 
 		characters that I can see...
 	"""
 	readingVariables = False
+	lostConnectionDeferred = None
 	delimiter = '\n'
 	def __init__( self, *args, **named ):
 		"""Initialise the AMIProtocol, arguments are ignored"""
@@ -77,9 +79,18 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 	def connectionLost( self, reason ):
 		"""(Internal) Handle loss of the connection (remote hangup)"""
 		log.info( """Connection terminated""" )
-		for df in self.pendingMessages:
-			df.errback( tw_error.ConnectionDone( """FastAGI connection terminated""") )
-		del self.pendingMessages[:]
+		try:
+			for df in self.pendingMessages:
+				df.errback( tw_error.ConnectionDone( """FastAGI connection terminated""") )
+		finally:
+			if self.lostConnectionDeferred:
+				self.lostConnectionDeferred.errback( reason )
+			del self.pendingMessages[:]
+	def onClose( self ):
+		"""Return a deferred which will fire when the connection is lost"""
+		if not self.lostConnectionDeferred:
+			self.lostConnectionDeferred = defer.Deferred()
+		return self.lostConnectionDeferred
 	def lineReceived(self, line):
 		"""(Internal) Handle Twisted's report of an incoming line from the manager"""
 		log.debug( 'Line In: %r', line )

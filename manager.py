@@ -7,6 +7,7 @@ Module defines a standard Python logging module log 'AMI'
 """
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
+from twisted.internet import error as tw_error
 import socket, logging
 from starpy import error
 
@@ -265,7 +266,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 			self.actionIDCallbacks[message['actionid']] = responseCallback
 		log.debug( """MSG OUT: %s""", message )
 		for key,value in message.items():
-			self.sendLine('%s: %s'%(key.lower(),value) )
+			self.sendLine('%s: %s'%(str(key.lower()),str(value)) )
 		self.sendLine('')
 		return message['actionid']
 	def collectDeferred( self, message, stopEvent ):
