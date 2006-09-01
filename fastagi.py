@@ -478,7 +478,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		Returns deferred integer response code
 		"""
 		try: 
-			option = { -1:'skip', 0:'noanswer', 1: }[ doAnswer ]
+			option = { -1:'skip', 0:'noanswer', 1:'answer' }[ doAnswer ]
 		except KeyError:
 			raise TypeError, "doAnswer accepts values -1, 0, 1 only (%s given)" % doAnswer
 		command = "PLAYBACK %s" %( filename, )
