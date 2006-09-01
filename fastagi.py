@@ -683,9 +683,15 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 	def setVariable( self, variable,value ):
 		"""Set given channel variable to given value
 		
+		variable -- the variable name passed to the server 
+		value -- the variable value passed to the server, will have 
+			any '"' characters removed in order to allow for " quoting
+			of the value.
+		
 		returns deferred integer result code
 		"""
-		command = "SET VARIABLE %s %r"%( variable, value )
+		value = '''"%s"'''%( str(value).replace( '"', '' ), )
+		command = "SET VARIABLE %s %s"%( variable, value )
 		return self.sendCommand( command ).addCallback( self.resultAsInt )
 	def streamFile( self, filename, escapeDigits="", offset=0 ):
 		"""Stream given file until escapeDigits starting from offset
