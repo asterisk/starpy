@@ -463,6 +463,30 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
+	def playback( self, filename, doAnswer=1 ):
+		"""Playback specified file in foreground
+		
+		filename -- filename to play
+		doAnswer -- whether to:
+				-1: skip playback if the channel is not answered
+				 0: playback the sound file without answering first
+				 1: answer the channel before playback, if not yet answered
+		
+		Note: this just wraps the execute method to issue
+		a PLAYBACK command.
+		
+		Returns deferred integer response code
+		"""
+		try: 
+			option = { -1:'skip', 0:'noanswer', 1: }[ doAnswer ]
+		except KeyError:
+			raise TypeError, "doAnswer accepts values -1, 0, 1 only (%s given)" % doAnswer
+		command = "PLAYBACK %s" %( filename, )
+		if option:
+			command += ",%s" %( option, )
+		return self.execute( command ).addCallback(
+			self.checkFailure, failure='-1',
+		).addCallback( self.resultAsInt )
 	def receiveChar( self, timeout=None ):
 		"""Receive a single text char on text-supporting channels (rare)
 		
