@@ -32,9 +32,12 @@ class UtilApplication( propertied.Propertied ):
 	configFiles = configFiles=('starpy.conf','~/.starpy.conf')
 	def __init__( self ):
 		"""Initialise the application from options in configFile"""
+		self.loadConfigurations()
+	def loadConfigurations( self ):
 		parser = self._loadConfigFiles( self.configFiles )
 		self._copyPropertiesFrom( parser, 'AMI', self.amiSpecifier )
 		self._copyPropertiesFrom( parser, 'FastAGI', self.agiSpecifier )
+		return parser
 	def _loadConfigFiles( self, configFiles ):
 		"""Load options from configuration files given (if present)"""
 		parser = ConfigParser( )
@@ -74,14 +77,17 @@ class UtilApplication( propertied.Propertied ):
 			try:
 				callback = self.extensionHandlers[ extension ]
 			except KeyError, err:
-				log.warn( """Unexpected connection to extension %r: %s""", extension, agi.variables )
-				agi.finish()
-			else:
 				try:
-					return callback( agi )
-				except Exception, err:
-					log.error( """Failure during callback %s for agi %s: %s""", callback, agi.variables, err )
-					# XXX return a -1 here
+					callback = self.extensionHandlers[ None ]
+				except KeyError, err:
+					log.warn( """Unexpected connection to extension %r: %s""", extension, agi.variables )
+					agi.finish()
+					return
+			try:
+				return callback( agi )
+			except Exception, err:
+				log.error( """Failure during callback %s for agi %s: %s""", callback, agi.variables, err )
+				# XXX return a -1 here
 		else:
 			if not df.called:
 				df.callback( agi )
@@ -91,6 +97,11 @@ class UtilApplication( propertied.Propertied ):
 		extension -- string extension for which to wait 
 		timeout -- duration in seconds to wait before defer.TimeoutError is 
 			returned to the deferred.
+		
+		Note that waiting callback overrides any registered handler; that is,
+		if you register one callback with waitForCallOn and another with 
+		handleCallsFor, the first incoming call will trigger the waitForCallOn
+		handler.
 		
 		returns deferred returning connected FastAGIProtocol or an error
 		"""
@@ -108,13 +119,21 @@ class UtilApplication( propertied.Propertied ):
 	def handleCallsFor( self, extension, callback ):
 		"""Register permanant handler for given extension
 		
-		extension -- string extension for which to wait 
+		extension -- string extension for which to wait or None to define 
+			a default handler (that chosen if there is not explicit handler 
+			or waiter)
 		callback -- callback function to be called for each incoming channel
 			to the given extension.
-		
+
+		Note that waiting callback overrides any registered handler; that is,
+		if you register one callback with waitForCallOn and another with 
+		handleCallsFor, the first incoming call will trigger the waitForCallOn
+		handler.
+
 		returns None
 		"""
-		extension = str(extension)
+		if extension is not None:
+			extension = str(extension)
 		self.extensionHandlers[ extension ] = callback 
 
 class AMISpecifier( propertied.Propertied ):
@@ -134,10 +153,14 @@ class AMISpecifier( propertied.Propertied ):
 		"port", """Server IP port to which to connect""",
 		defaultValue = 5038,
 	)
+	timeout = common.FloatProperty(
+		"timeout", """Timeout in seconds for an AMI connection timeout""",
+		defaultValue = 5.0,
+	)
 	def login( self ):
 		"""Login to the specified manager via the AMI"""
 		theManager = manager.AMIFactory(self.username, self.secret)
-		return theManager.login(self.server, self.port)
+		return theManager.login(self.server, self.port, timeout=self.timeout)
 
 class AGISpecifier( propertied.Propertied ):
 	"""Specifier of where we send the user to connect to our AGI"""
