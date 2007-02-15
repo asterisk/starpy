@@ -686,7 +686,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		returns deferred integer result code
 		"""
-		command = """SET EXTENSION %s"""%( context, )
+		command = """SET EXTENSION %s"""%( extension, )
 		return self.sendCommand( command ).addCallback( self.resultAsInt )
 	def setMusic( self, on=True, musicClass=None ):
 		"""Enable/disable and/or choose music class for channel's music-on-hold
@@ -814,6 +814,7 @@ class InSequence( object ):
 		return result
 	def onActionSuccess( self, result, finalDF ):
 		"""Handle individual-action success"""
+		log.debug( 'onActionSuccess: %s', result )
 		if self.actions:
 			action = self.actions.pop(0)
 			log.debug( 'action %s', action )
@@ -826,6 +827,7 @@ class InSequence( object ):
 			finalDF.callback( self.results )
 	def onActionFailure( self, reason, finalDF ):
 		"""Handle individual-action failure"""
+		log.debug( 'onActionFailure' )
 		reason.results = self.results
 		finalDF.errback( reason )
 
