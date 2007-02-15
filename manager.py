@@ -444,7 +444,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 		message = {'action':'ParkedCalls'}
 		return self.collectDeferred( message, 'ParkedCallsComplete' )
 	def ping( self ):
-		"""Log off from the manager instance"""
+		"""Check to see if the manager is alive..."""
 		message = {'action':'ping'}
 		return self.sendDeferred( message ).addCallback( 
 			self.errorUnlessResponse, expected = 'Pong',
@@ -516,13 +516,17 @@ class AMIFactory(protocol.ClientFactory):
 	def __init__(self, username, secret):
 		self.username = username
 		self.secret = secret
-	def login( self, ip='localhost', port=5038 ):
+	def login( self, ip='localhost', port=5038, timeout=5 ):
 		"""Connect, returning our (singleton) protocol instance with login completed
 		
 		XXX This is messy, we'd much rather have the factory able to create
 		large numbers of protocols simultaneously
 		"""
 		self.loginDefer = defer.Deferred()
-		reactor.connectTCP(ip,port,self)
+		reactor.connectTCP(ip,port,self, timeout=timeout)
 		return self.loginDefer
+	def clientConnectionFailed( self, reason ):
+		"""Connection failed, report to our callers"""
+		print 'clientConnectionFailed', reason.getTraceback()
+		self.loginDefer.errback( reason )
 
