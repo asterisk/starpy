@@ -27,7 +27,7 @@ class Interaction( propertied.Propertied ):
 	ALL_DIGITS = '0123456789*#'
 	timeout = common.FloatProperty(
 		"timeout", """Duration to wait for response before repeating message""",
-		defaultValue = '5',
+		defaultValue = 5,
 	)
 	maxRepetitions = common.IntegerProperty(
 		"maxRepetitions", """Maximum number of times to play before failure""",
@@ -54,11 +54,11 @@ class Runner( propertied.Propertied ):
 		df = defer.Deferred()
 		model = client.model
 		if hasattr( model, 'onSuccess' ):
-			log.debug( 'register onSuccess', model.onSuccess )
+			log.debug( 'register onSuccess: %s', model.onSuccess )
 			df.addCallback( model.onSuccess, runner=client )
 		if hasattr( model, 'onFailure' ):
-			log.debug( 'register onFailure', model.onSuccess )
-			df.addCallback( model.onFailure, runner=client )
+			log.debug( 'register onFailure: %s', model.onFailure )
+			df.addErrback( model.onFailure, runner=client )
 		return df
 	finalDF = basic.BasicProperty(
 		"finalDF", """Final deferred we will callback/errback on success/failure""",
@@ -75,15 +75,43 @@ class Runner( propertied.Propertied ):
 	)
 	def returnResult( self, result ):
 		"""Return result of deferred to our original caller"""
+		log.debug( 'returnResult: %s %s', self.model,result )
 		if not self.finalDF.called:
+			self.finalDF.debug = True
 			self.finalDF.callback( result )
+		else:
+			log.debug( 'finalDF already called, ignoring %s', result )
 		return result
 	def returnError( self, reason ):
 		"""Return failure of deferred to our original caller"""
+		log.debug( 'returnError: %s', self.model )
 		if not isinstance( reason.value, error.MenuExit ):
 			log.warn( """Failure during menu: %s""", reason.getTraceback())
 		if not self.finalDF.called:
+			self.finalDF.debug = True
 			self.finalDF.errback( reason )
+		else:
+			log.debug( 'finalDF already called, ignoring %s', reason.getTraceback() )
+			
+	def promptAsRunner( self, prompt ):
+		"""Take set of prompt-compatible objects and produce a PromptRunner for them"""
+		realPrompt = []
+		for p in prompt:
+			if isinstance( p, (str,unicode)):
+				p = AudioPrompt( p )
+			elif isinstance( p, int ):
+				p = NumberPrompt( p )
+			elif not isinstance( p, Prompt ):
+				raise TypeError( """Unknown prompt element type on %r: %s"""%(
+					p, p.__class__,
+				))
+			realPrompt.append( p )
+		return PromptRunner( 
+			elements = realPrompt,
+			escapeDigits = self.escapeDigits,
+			agi = self.agi,
+			timeout = self.model.timeout,
+		)
 
 class CollectDigitsRunner( Runner ):
 	"""User's single interaction to enter a set of digits
@@ -164,6 +192,103 @@ class CollectPasswordRunner( CollectDigitsRunner ):
 			return False, "Password doesn't match"
 		return True, None
 
+class CollectAudioRunner( Runner ):
+	"""Audio-collection runner, records user audio to a file on the asterisk server"""
+	escapeDigits = common.StringLocaleProperty(
+		"escapeDigits", """Set of digits which escape from recording""",
+		defaultFunction = lambda prop,client: client.model.escapeDigits,
+		setDefaultOnGet = False,
+	)
+	def __call__( self, *args, **named ):
+		"""Begin the AGI processing for the menu"""
+		self.readPrompt()
+		return self.finalDF 
+	def readPrompt( self, result=None ):
+		"""Begin process of reading audio from the user"""
+		if self.model.prompt:
+			# wants us to read a prompt to the user before recording...
+			runner = self.promptAsRunner( self.model.prompt )
+			runner.timeout = 0.1
+			return runner().addCallback( self.onReadPrompt ).addErrback( self.returnError )
+		else:
+			return self.collectAudio().addErrback( self.returnError )
+	def onReadPrompt( self, result ):
+		"""We've finished reading the prompt to the user, check for escape"""
+		log.info( 'Finished reading prompt for collect audio: %r', result )
+		if result and result in self.escapeDigits:
+			raise error.MenuExit(
+				self.model,
+				"""User cancelled entry of audio during prompt""",
+			)
+		else:
+			return self.collectAudio()
+	def collectAudio( self ):
+		"""We're supposed to record audio from the user with our model's parameters"""
+		# XXX use a temporary file for recording the audio, then move to final destination
+		log.debug( 'collectAudio' )
+		if hasattr( self.model, 'temporaryFile' ):
+			filename = self.model.temporaryFile
+		else:
+			filename = self.model.filename
+		df = self.agi.recordFile( 
+			filename=filename, 
+			format=self.model.format,
+			escapeDigits=self.escapeDigits, 
+			timeout=self.model.timeout,
+			offsetSamples=None, 
+			beep=self.model.beep, 
+			silence=self.model.silence,
+		).addCallbacks(
+			self.onAudioCollected, self.onAudioCollectFail,
+		)
+		if hasattr( self.model, 'temporaryFile' ):
+			df.addCallback( self.moveToFinal )
+		return df
+	def onAudioCollected( self, result ):
+		"""Process the results of collecting the audio"""
+		digits, typeOfExit, endpos = result 
+		if typeOfExit in ('hangup','timeout'):
+			# expected common-case for recording...
+			return self.returnResult( (self,(digits,typeOfExit,endpos)) )
+		elif typeOfExit =='dtmf':
+			raise error.MenuExit(
+				self.model,
+				"""User cancelled entry of audio""",
+			)
+		else:
+			raise ValueError( """Unrecognised recordFile results: (%s, %s %s)"""%(
+				digits, typeOfExit, endpos,
+			))
+	def onAudioCollectFail( self, reason ):
+		"""Process failure to record audio"""
+		log.error(
+			"""Failure collecting audio for CollectAudio instance %s: %s""",
+			self.model, reason.getTraceback(),
+		)
+		return reason # re-raise the error...
+	def moveToFinal( self, result ):
+		"""On succesful recording, move temporaryFile to final file"""
+		log.info( 
+			'Moving recorded audio %r to final destination %r', 
+			self.model.temporaryFile, self.model.filename 
+		)
+		import os
+		try:
+			os.rename( 
+				'%s.%s'%(self.model.temporaryFile,self.model.format),
+				'%s.%s'%(self.model.filename,self.model.format),
+			)
+		except (OSError, IOError), err:
+			log.error( 
+				"""Unable to move temporary recording file %r to target file %r: %s""",
+				self.model.temporaryFile, self.model.filename,
+				# XXX would like to use getException here...
+				err,
+			)
+			raise
+		return result
+
+
 class MenuRunner( Runner ):
 	"""User's single interaction with a given menu"""
 	def defaultEscapeDigits( prop, client ):
@@ -185,24 +310,7 @@ class MenuRunner( Runner ):
 		return self.finalDF 
 	def readMenu( self, result=None ):
 		"""Read our menu to the user"""
-		prompt = self.model.prompt 
-		realPrompt = []
-		for p in prompt:
-			if isinstance( p, (str,unicode)):
-				p = AudioPrompt( p )
-			elif isinstance( p, int ):
-				p = NumberPrompt( p )
-			elif not isinstance( p, Prompt ):
-				raise TypeError( """Unknown prompt element type on %r: %s"""%(
-					p, p.__class__,
-				))
-			realPrompt.append( p )
-		runner = PromptRunner( 
-			elements = realPrompt,
-			escapeDigits = self.escapeDigits,
-			agi = self.agi,
-			timeout = self.model.timeout,
-		)
+		runner = self.promptAsRunner( self.model.prompt )
 		return runner().addCallback( self.onReadMenu ).addErrback( self.returnError )
 	def onReadMenu( self, pressed ):
 		"""Deal with succesful result from reading menu"""
@@ -297,7 +405,7 @@ class SubMenu( Option ):
 	def __call__( self, pressed, parent ):
 		"""Get result from the sub-menu, add ourselves into the result"""
 		def onResult( result ):
-			log.debug( """Child menu result: %s""", result )
+			log.debug( """Child menu %s result: %s""", self.menu, result )
 			result.insert( 0, (self,pressed) )
 			return result 
 		def onFailure( reason ):
@@ -349,6 +457,45 @@ class CollectPassword( CollectDigits ):
 		"soundFile", """File (name) for the pre-recorded blurb""",
 		defaultValue = 'vm-password',
 	)
+	
+class CollectAudio( Interaction ):
+	"""Collects audio file from the user"""
+	prompt = common.ListProperty(
+		"prompt", """(Set of) prompts to run, can be Prompt instances or filenames
+		
+		Used by the PromptRunner to produce prompt selections
+		""",
+	)
+	textPrompt = common.StringProperty(
+		"textPrompt", """Textual prompt describing the option""",
+	)
+	temporaryFile = common.StringLocaleProperty(
+		"temporaryFile", """Temporary file into which to record the audio before moving to filename""",
+	)
+	filename = common.StringLocaleProperty(
+		"filename", """Final filename into which to record the file...""",
+	)
+	deleteOnFail = common.BooleanProperty(
+		"deleteOnFail", """Whether to delete failed attempts to record a file""",
+		defaultValue = True
+	)
+	escapeDigits = common.StringLocaleProperty(
+		"escapeDigits", """Set of digits which escape from recording the file""",
+		defaultValue = '#*0123456789',
+	)
+	timeout = common.FloatProperty(
+		"timeout", """Duration to wait for recording (maximum record time)""",
+		defaultValue = 60,
+	)
+	silence = common.FloatProperty(
+		"silence", """Duration to wait for recording (maximum record time)""",
+		defaultValue = 5,
+	)
+	beep = common.BooleanProperty(
+		"beep", """Whether to play a "beep" sound at beginning of recording""",
+		defaultValue = True,
+	)
+	runnerClass = CollectAudioRunner
 
 class PromptRunner( propertied.Propertied ):
 	"""Prompt formed from list of sub-prompts
@@ -370,7 +517,7 @@ class PromptRunner( propertied.Propertied ):
 		
 		Returns from the first of the sub-prompts that recevies a selection
 		
-		returns str(digit) for the key the user pressed or 
+		returns str(digit) for the key the user pressed
 		"""
 		return self.onNext( None )
 	def onNext( self, result, index=0 ):
