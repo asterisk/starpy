@@ -353,7 +353,7 @@ class MenuRunner( Runner ):
 				return self.agi.getOption( 
 					self.model.INVALID_OPTION_FILE, self.escapeDigits, 
 					timeout=0,
-				).addCallback( self.onReadMenu ).addErrback( self.returnError )
+				).addCallback( self.readMenu ).addErrback( self.returnError )
 
 class Menu( Interaction ):
 	"""IVR-based menu, returns options selected by the user and keypresses

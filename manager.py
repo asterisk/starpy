@@ -525,8 +525,7 @@ class AMIFactory(protocol.ClientFactory):
 		self.loginDefer = defer.Deferred()
 		reactor.connectTCP(ip,port,self, timeout=timeout)
 		return self.loginDefer
-	def clientConnectionFailed( self, reason ):
+	def clientConnectionFailed( self, connector, reason):
 		"""Connection failed, report to our callers"""
-		print 'clientConnectionFailed', reason.getTraceback()
 		self.loginDefer.errback( reason )
 
