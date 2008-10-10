@@ -483,7 +483,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 			raise TypeError, "doAnswer accepts values -1, 0, 1 only (%s given)" % doAnswer
 		command = "PLAYBACK %s" %( filename, )
 		if option:
-			command += ",%s" %( option, )
+			command += " %s" %( option, )
 		return self.execute( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
