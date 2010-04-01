@@ -490,12 +490,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Temporarily stop recording the channel"""
         message = {'action':'pausemonitor','channel':channel}
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
-    def ping( self ):
+    def ping(self):
         """Check to see if the manager is alive..."""
         message = {'action':'ping'}
-        return self.sendDeferred( message ).addCallback(
-            self.errorUnlessResponse, expected = 'Pong',
-        )
+        if self.amiVersion == "1.0":
+            return self.sendDeferred(message).addCallback(
+                self.errorUnlessResponse, expected = 'Pong',
+            )
+        else:
+            return self.sendDeferred(message).addCallback(
+                self.errorUnlessResponse
+            )
     def playDTMF(self, channel, digit):
         """Play DTMF on a given channel"""
         message = {'action':'playdtmf','channel':channel,'digit':digit}
