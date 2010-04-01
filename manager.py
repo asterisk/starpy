@@ -3,7 +3,7 @@
 The Asterisk Manager Interface is a simple line-oriented protocol that allows
 for basic control of the channels active on a given Asterisk server.
 
-Module defines a standard Python logging module log 'AMI' 
+Module defines a standard Python logging module log 'AMI'
 """
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
@@ -15,19 +15,19 @@ log = logging.getLogger( 'AMI' )
 
 class AMIProtocol(basic.LineOnlyReceiver):
     """Protocol for the interfacing with the Asterisk Manager Interface (AMI)
-    
+
     Provides most of the AMI Action interfaces.
     Auto-generates ActionID fields for all calls.
-    
-    Events and messages are passed around as simple dictionaries with 
+
+    Events and messages are passed around as simple dictionaries with
     all-lowercase keys.  Values are case-sensitive.
-    
+
     XXX Want to allow for timeouts
-    
+
     Attributes:
-        count -- total count of messages sent from this protocol 
+        count -- total count of messages sent from this protocol
         hostName -- used along with count and ID to produce unique IDs
-        messageCache -- stores incoming message fragments from the manager 
+        messageCache -- stores incoming message fragments from the manager
     """
     count = 0
     amiVersion = None
@@ -39,13 +39,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
         self.hostName = socket.gethostname()
     def registerEvent( self, event, function ):
         """Register callback for the given event-type
-        
-        event -- string name for the event, None to match all events, or 
+
+        event -- string name for the event, None to match all events, or
             a tuple of string names to match multiple events.
-        
+
             See http://www.voip-info.org/wiki/view/asterisk+manager+events
             for list of events and the data they bear.  Includes:
-                
+
                 Newchannel -- note that you can receive multiple Newchannel
                     events for a single channel!
                 Hangup
@@ -73,11 +73,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
                 ParkedCallsComplete
                 QueueParams
                 QueueMember
-            
+
             among other standard events.  Also includes user-defined events.
-        function -- function taking (protocol,event) as arguments or None 
+        function -- function taking (protocol,event) as arguments or None
             to deregister the current function.
-        
+
         Multiple functions may be registered for a given event
         """
         log.debug( 'Registering function %s to handle events of type %r', function, event )
@@ -87,11 +87,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
             self.eventTypeCallbacks.setdefault( ev, []).append( function )
     def deregisterEvent( self, event, function=None ):
         """Deregister callback for the given event-type
-        
+
         event -- event name (or names) to be deregistered, see registerEvent
         function -- the function to be removed from the callbacks or None to
             remove all callbacks for the event
-        
+
         returns success boolean
         """
         log.debug( 'Deregistering handler %s for events of type %r', function, event )
@@ -102,7 +102,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             try:
                 set = self.eventTypeCallbacks[ ev ]
             except KeyError, err:
-                success = False 
+                success = False
             else:
                 try:
                     while function in set:
@@ -113,7 +113,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
                     try:
                         del self.eventTypeCallbacks[ ev ]
                     except KeyError, err:
-                        success = False 
+                        success = False
         return success
     def lineReceived(self, line):
         """Handle Twisted's report of an incoming line from the manager"""
@@ -123,10 +123,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
             self.dispatchIncoming() # does dispatch and clears cache
     def connectionMade( self ):
         """Handle connection to the AMI port (auto-login)
-        
-        This is a Twisted customisation point, we use it to automatically 
+
+        This is a Twisted customisation point, we use it to automatically
         log into the connection we've just established.
-        
+
         XXX Should probably use proper Twisted-style credential negotiations
         """
         log.info( 'Connection Made' )
@@ -136,7 +136,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if not message['response'] == 'Success':
                 log.info( 'Login Failure: %s', message )
                 self.transport.loseConnection()
-                self.factory.loginDefer.errback( 
+                self.factory.loginDefer.errback(
                     error.AMICommandFailure( """Unable to connect to manager""", message)
                 )
             else:
@@ -150,7 +150,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             """Handle failure to connect (e.g. due to timeout)"""
             log.info( 'Login Call Failure: %s', reason.getTraceback() )
             self.transport.loseConnection()
-            self.factory.loginDefer.errback( 
+            self.factory.loginDefer.errback(
                 reason
             )
         df.addCallbacks( onComplete, onFailure )
@@ -186,7 +186,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
                         try:
                             key,value = line.split(':',1)
                         except ValueError, err:
-                            # XXX data-safety issues, what prevents the VERSION_PREFIX from 
+                            # XXX data-safety issues, what prevents the VERSION_PREFIX from
                             # showing up in a data-set?
                             log.warn( """Improperly formatted line received and ignored: %r""", line )
                         else:
@@ -200,7 +200,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
                     callback( message )
                 except Exception, err:
                     # XXX log failure here...
-                    pass 
+                    pass
         # otherwise is a monitor message or something we didn't send...
         if message.has_key( 'event' ):
             self.dispatchEvent( message )
@@ -210,25 +210,25 @@ class AMIProtocol(basic.LineOnlyReceiver):
             try:
                 handlers = self.eventTypeCallbacks[ key ]
             except KeyError, err:
-                pass 
+                pass
             else:
                 for handler in handlers:
                     try:
                         handler( self, event )
                     except Exception, err:
                         # would like the getException code here...
-                        log.error( 
-                            'Exception in event handler %s on event %s: %s', 
-                            handler, event, err 
+                        log.error(
+                            'Exception in event handler %s on event %s: %s',
+                            handler, event, err
                         )
     def generateActionId( self ):
         """Generate a unique action ID
-        
+
         Assumes that hostName must be unique among all machines which talk
         to a given AMI server.  With that is combined the memory location of
         the protocol object (which should be machine-unique) and the count of
         messages that this manager has created so far.
-        
+
         Generally speaking, you shouldn't need to know the action ID, as the
         protocol handles the management of them automatically.
         """
@@ -236,14 +236,14 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return '%s-%s-%s'%(self.hostName,id(self),self.count)
     def sendDeferred( self, message ):
         """Send with a single-callback deferred object
-        
+
         Returns deferred that fires when a response to this message is received
         """
         df = defer.Deferred()
         actionid = self.sendMessage( message, df.callback )
-        df.addCallbacks( 
-            self.cleanup, self.cleanup, 
-            callbackArgs=(actionid,), errbackArgs=(actionid,) 
+        df.addCallbacks(
+            self.cleanup, self.cleanup,
+            callbackArgs=(actionid,), errbackArgs=(actionid,)
         )
         return df
     def cleanup( self, result, actionid ):
@@ -253,10 +253,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
         except KeyError, err:
             pass
         return result
-        
+
     def sendMessage( self, message, responseCallback=None ):
         """Send the message to the other side, return deferred for the result
-        
+
         returns the actionid for the message
         """
         message = dict([(k.lower(),v) for (k,v) in message.items()])
@@ -271,7 +271,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return message['actionid']
     def collectDeferred( self, message, stopEvent ):
         """Collect all responses to this message until stopEvent or error
-        
+
         returns deferred returning sequence of events/responses
         """
         df = defer.Deferred()
@@ -284,14 +284,14 @@ class AMIProtocol(basic.LineOnlyReceiver):
             else:
                 cache.append( event )
         actionid = self.sendMessage( message, onEvent )
-        df.addCallbacks( 
-            self.cleanup, self.cleanup, 
-            callbackArgs=(actionid,), errbackArgs=(actionid,) 
+        df.addCallbacks(
+            self.cleanup, self.cleanup,
+            callbackArgs=(actionid,), errbackArgs=(actionid,)
         )
         return df
     def errorUnlessResponse( self, message, expected='Success' ):
         """Raise a AMICommandFailure error unless message['response'] == expected
-        
+
         If == expected, returns the message
         """
         if message['response'] != expected:
@@ -312,7 +312,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         message = {'Action':'AgentLogoff','Agent':agent,'Soft':soft}
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def agents(self):
-        """Retrieve agents information"""        
+        """Retrieve agents information"""
         message = {"action":"agents"}
         return self.collectDeferred( message, "AgentsComplete")
     def changeMonitor( self, channel, filename ):
@@ -321,10 +321,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def command(self, command):
         """Run asterisk console command, return deferred result for line of lines
-        
+
         returns deferred returning list of lines (strings) of the command
         output.
-        
+
         See listCommands to see available commands
         """
         df = self.sendDeferred( {'action': 'command', 'command':command } )
@@ -333,13 +333,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
             return message[' ']
         return df.addCallback( onResult )
     def dbGet(self,family,key):
-        """This action retrieves a value from the AstDB database"""            
+        """This action retrieves a value from the AstDB database"""
         df = defer.Deferred()
-        def extractValue( ami,event ):            
+        def extractValue( ami,event ):
             value = event['val']
-            return df.callback( value )            
-        message = {'Action':'DBGet','family':family,'key':key}        
-        self.sendDeferred( message ).addCallback( self.errorUnlessResponse )        
+            return df.callback( value )
+        message = {'Action':'DBGet','family':family,'key':key}
+        self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
         self.registerEvent("DBGetResponse",extractValue)
         return df
     def  dbPut(self,family,key,value):
@@ -357,7 +357,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def extensionState(self,exten,context):
         """This command reports the extension state for the given extension. If the extension has a hint, this will report the status of the device connected to the extension
-        
+
         The following are the possible extension states:
 
         -2    Extension removed
@@ -366,7 +366,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
          1    In use
          2    Busy"""
         message = {'Action':'ExtensionState','Exten':exten,'Context':context}
-        return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )            
+        return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def getConfig(self,filename):
         """Retrieves the data from an Asterisk configuration file"""
         message = {'Action':'GetConfig','filename':filename}
@@ -382,13 +382,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
             else:
                 raise error.AMICommandFailure( message )
             if value == '(null)':
-                value = None 
+                value = None
             return value
         message = {'action':'getvar','channel':channel,'variable':variable}
-        return self.sendDeferred( 
-            message 
-        ).addCallback( 
-            self.errorUnlessResponse 
+        return self.sendDeferred(
+            message
+        ).addCallback(
+            self.errorUnlessResponse
         ).addCallback(
             extractVariable,
         )
@@ -396,38 +396,38 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Tell channel to hang up"""
         message = {'action':'hangup','channel':channel}
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
-    
+
     def login( self ):
         """Log into the AMI interface (done automatically on connection)
-        
+
         Uses factory.username and factory.secret
         """
         return self.sendDeferred( {
-            'action': 'login', 
-            'username': self.factory.username, 
+            'action': 'login',
+            'username': self.factory.username,
             'secret': self.factory.secret,
-        } ).addCallback( self.errorUnlessResponse )        
+        } ).addCallback( self.errorUnlessResponse )
     def listCommands( self ):
         """List the set of commands available
-        
-        Returns a single message with each command-name as a key 
+
+        Returns a single message with each command-name as a key
         """
         message = {'action':'listcommands',}
         def removeActionId( message ):
             try:
                 del message['actionid']
             except KeyError, err:
-                pass 
+                pass
             return message
-        return self.sendDeferred( message ).addCallback( 
-            self.errorUnlessResponse 
+        return self.sendDeferred( message ).addCallback(
+            self.errorUnlessResponse
         ).addCallback(
             removeActionId
         )
     def logoff( self ):
         """Log off from the manager instance"""
         message = {'action':'logoff'}
-        return self.sendDeferred( message ).addCallback( 
+        return self.sendDeferred( message ).addCallback(
             self.errorUnlessResponse, expected = 'Goodbye',
         )
     def mailboxCount( self, mailbox ):
@@ -450,20 +450,20 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Record given channel to a file (or attempt to anyway)"""
         message = {'action':'monitor','channel':channel,'file':file,'format':format, 'mix':mix}
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
-    def originate( 
+    def originate(
         self, channel, context=None, exten=None, priority=None,
         timeout=None, callerid=None, account=None, application=None,
         data=None, variable={}, async=False
     ):
         """Originate call to connect channel to given context/exten/priority
-        
+
         channel -- the outgoing channel to which will be dialed
-        context/exten/priority -- the dialplan coordinate to which to connect 
+        context/exten/priority -- the dialplan coordinate to which to connect
             the channel (i.e. where to start the called person)
         timeout -- duration before timeout in seconds (note: not Asterisk standard!)
         callerid -- callerid to display on the channel
         account -- account to which the call belongs
-        application -- alternate application to Dial to use for outbound dial 
+        application -- alternate application to Dial to use for outbound dial
         data -- data to pass to application
         variable -- variables associated to the call
         async -- make the origination asynchronous
@@ -489,11 +489,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def pauseMonitor(self,channel):
         """Temporarily stop recording the channel"""
         message = {'action':'pausemonitor','channel':channel}
-        return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )    
+        return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def ping( self ):
         """Check to see if the manager is alive..."""
         message = {'action':'ping'}
-        return self.sendDeferred( message ).addCallback( 
+        return self.sendDeferred( message ).addCallback(
             self.errorUnlessResponse, expected = 'Pong',
         )
     def playDTMF(self, channel, digit):
@@ -526,7 +526,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         #return self.collectDeferred( message, 'QueueStatusEnd' )
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def queueStatus( self ):
-        """Retrieve information about active queues via multiple events"""        
+        """Retrieve information about active queues via multiple events"""
         message = {'action':'queuestatus'}
         return self.collectDeferred( message, 'QueueStatusComplete' )
     def redirect( self, channel, context, exten, priority, extraChannel=None ):
@@ -551,10 +551,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def setVar( self, channel, variable, value ):
         """Set channel variable to given value"""
         message = {'action':'setvar','channel':channel,'variable':variable,'value':value}
-        return self.sendDeferred( 
-            message 
-        ).addCallback( 
-            self.errorUnlessResponse 
+        return self.sendDeferred(
+            message
+        ).addCallback(
+            self.errorUnlessResponse
         )
     def sipPeers(self ):
         """List all known sip peers"""
@@ -566,16 +566,16 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def status(self, channel=None ):
         """Retrieve status for the given (or all) channels via multi-event callback
-        
+
         channel -- channel name or None to retrieve all channels
-        
-        returns deferred returning list of Status Events for each requested 
+
+        returns deferred returning list of Status Events for each requested
         channel
         """
         message = {'action':'Status'}
         if channel:
             message['channel'] = channel
-        return self.collectDeferred( message, 'StatusComplete' )        
+        return self.collectDeferred( message, 'StatusComplete' )
     def stopMonitor( self, channel ):
         """Stop monitoring the given channel"""
         message = {'action':'monitor','channel':channel,}
@@ -586,12 +586,12 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def updateConfig(self, srcfile, dstfile, reload, headers={}):
         """Update a configuration file
-        
-        headers should be a dictionary with the following keys 
+
+        headers should be a dictionary with the following keys
         Action-XXXXXX
         Cat-XXXXXX
         Var-XXXXXX
-        Value-XXXXXX        
+        Value-XXXXXX
         Match-XXXXXX
         """
         message = {}
@@ -601,7 +601,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             reload='no'
         message = {'action':'updateconfig','srcfilename':srcfile,'dstfilename':dstfile,'reload':reload}
         for k,v in headers.items():
-            message[k] = v        
+            message[k] = v
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse )
     def userEvent(self,event,**headers):
         """Sends an arbitrary event to the Asterisk Manager Interface."""
@@ -643,7 +643,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Transfers zap channel"""
         message = {'Action':'ZapTransfer','channel':channel}
         return self.sendDeferred( message ).addCallback( self.errorUnlessResponse)
-    
+
 
 
 class AMIFactory(protocol.ClientFactory):
@@ -655,7 +655,7 @@ class AMIFactory(protocol.ClientFactory):
         self.secret = secret
     def login( self, ip='localhost', port=5038, timeout=5 ):
         """Connect, returning our (singleton) protocol instance with login completed
-        
+
         XXX This is messy, we'd much rather have the factory able to create
         large numbers of protocols simultaneously
         """
