@@ -281,9 +281,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		if pauseChar:
 			command += ' %r'%( pauseChar )
 		
-		return self.sendCommand( command ).addCallback(
-			self.checkFailure,
-		).addCallback( self.onStreamingComplete, skipMS=skipMS )
+		return self.sendCommand( command ).addCallback( self.checkFailure )
 	def databaseDel( self, family, key ):
 		"""Delete the given key from the database
 		
