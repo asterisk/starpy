@@ -252,7 +252,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		user, or whether we need to shunt them off somewhere else.
 		"""
 		if channel:
-			command = "CHANNEL STATUS %s"%(channel)
+			command = 'CHANNEL STATUS "%s"'%(channel)
 		else:
 			command = "CHANNEL STATUS"
 		return self.sendCommand( command ).addCallback(
@@ -275,7 +275,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		returns deferred (digit,endpos) on success, or errors on failure, 
 			note that digit will be 0 if no digit was pressed AFAICS
 		"""
-		command = 'CONTROL STREAM FILE %s %r %s %r %r'%( 
+		command = 'CONTROL STREAM FILE "%s" %r %s %r %r'%( 
 			filename, escapeDigits, skipMS, ffChar, rewChar
 		)
 		if pauseChar:
@@ -287,7 +287,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		Returns deferred integer result code
 		"""
-		command = 'DATABASE DEL %s %s'%( family, key )
+		command = 'DATABASE DEL "%s" "%s"'%( family, key )
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='0',
 		).addCallback( self.resultAsInt )
@@ -296,9 +296,9 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		Returns deferred integer result code
 		"""
-		command = "DATABASE DELTREE %s"%(family,)
+		command = 'DATABASE DELTREE "%s"'%(family,)
 		if keyTree:
-			command += ' %s'%(keytree,)
+			command += ' "%s"'%(keytree,)
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='0',
 		).addCallback( self.resultAsInt )
@@ -307,7 +307,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		Returns deferred string value for the key
 		"""
-		command = "DATABASE GET %s %s"%(family,key)
+		command = 'DATABASE GET "%s" "%s"'%(family,key)
 		def returnValue( resultLine ):
 			# get the second item without the brackets...
 			return resultLine[1:-1]
@@ -321,7 +321,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		Returns deferred integer result code
 		"""
-		command = "DATABASE PUT %s %s %s"%(family,key, value)
+		command = 'DATABASE PUT "%s" "%s" "%s"'%(family,key, value)
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='0',
 		).addCallback( self.resultAsInt )
@@ -334,7 +334,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		Returns deferred string result for the application, which 
 		may have failed, result values are application dependant.
 		"""
-		command = '''EXEC %s'''%(application)
+		command = '''EXEC "%s"'''%(application)
 		if options:
 			command += ' "%s"'%(
 				"|".join([
@@ -354,7 +354,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		returns deferred (str(digits), bool(timedOut))
 		"""
 		timeout *= 1000
-		command = """GET DATA %s %s %s"""%(filename, timeout, maxDigits)
+		command = '''GET DATA "%s" %s %s'''%(filename, timeout, maxDigits)
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultPlusTimeoutFlag )
@@ -367,7 +367,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		returns (chr(option) or '' on timeout, endpos)
 		"""
-		command = """GET OPTION %s %r"""%(filename,escapeDigits)
+		command = '''GET OPTION "%s" %r'''%(filename,escapeDigits)
 		if timeout is not None:
 			timeout *= 1000
 			command += ' %s'%(timeout,)
@@ -434,7 +434,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		"""
 		def stripBrackets( value ):
 			return value.strip()[1:-1]
-		command = '''GET VARIABLE %s'''%( variable, )
+		command = '''GET VARIABLE "%s"'''%( variable, )
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='0',
 		).addCallback( self.secondResultItem ).addCallback( stripBrackets )
@@ -448,16 +448,17 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		"""
 		command = "HANGUP"
 		if channel is not None:
-			command += ' %s'%(channel)
+			command += ' "%s"'%(channel)
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
-	def noop( self ):
+	def noop( self, message=None ):
 		"""Send a null operation to the server
 		
 		Returns deferred integer response code
 		"""
 		command = "NOOP"
+		if message is not None: command += ' "%s"' % message
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
@@ -479,9 +480,9 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 			option = { -1:'skip', 0:'noanswer', 1:'answer' }[ doAnswer ]
 		except KeyError:
 			raise TypeError, "doAnswer accepts values -1, 0, 1 only (%s given)" % doAnswer
-		command = "PLAYBACK %s" %( filename, )
+		command = 'PLAYBACK "%s"' %( filename, )
 		if option:
-			command += " %s" %( option, )
+			command += ' "%s"' %( option, )
 		return self.execute( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
@@ -537,7 +538,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 			timeout, code='0'
 		"""
 		timeout *= 1000
-		command = """RECORD FILE %s %s %s %s"""%(
+		command = '''RECORD FILE "%s" "%s" %s %s'''%(
 			filename, format, escapeDigits, timeout,
 		)
 		if offsetSamples is not None:
@@ -641,7 +642,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		
 		returns deferred integer result code
 		"""
-		command = 'SEND IMAGE %s'%(filename,)
+		command = 'SEND IMAGE "%s"'%(filename,)
 		return self.sendCommand( command ).addCallback(
 			self.checkFailure, failure='-1',
 		).addCallback( self.resultAsInt )
@@ -713,7 +714,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		returns deferred integer result code
 		"""
 		value = '''"%s"'''%( str(value).replace( '"', '' ), )
-		command = "SET VARIABLE %s %s"%( variable, value )
+		command = 'SET VARIABLE "%s" "%s"'%( variable, value )
 		return self.sendCommand( command ).addCallback( self.resultAsInt )
 	def streamFile( self, filename, escapeDigits="", offset=0 ):
 		"""Stream given file until escapeDigits starting from offset
@@ -723,7 +724,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 		Note: streamFile is apparently unstable in AGI, may want to use
 		execute( 'PLAYBACK', ... ) instead (according to the Wiki)
 		"""
-		command = "STREAM FILE %s %r"%(filename,escapeDigits)
+		command = 'STREAM FILE "%s" %r'%(filename,escapeDigits)
 		if offset is not None:
 			command += ' %s'%(offset)
 		return  self.sendCommand( command ).addCallback( 
