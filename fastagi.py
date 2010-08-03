@@ -326,18 +326,28 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             self.checkFailure, failure='0',
         ).addCallback( self.resultAsInt )
     databasePut = databaseSet
-    def execute( self, application, *options ):
+    def execute( self, application, *options, **kwargs ):
         """Execute a dialplan application with given options
 
         Note: asterisk calls this "exec", which is Python keyword
+
+        comma_delimiter -- Use new style comma delimiter for diaplan
+        application arguments.  Asterisk uses pipes in 1.4 and older and
+        prefers commas in 1.6 and up.  Pass comma_delimiter=True to avoid
+        warnings from Asterisk 1.6 and up.
 
         Returns deferred string result for the application, which
         may have failed, result values are application dependant.
         """
         command = '''EXEC "%s"'''%(application)
         if options:
+            if kwargs.pop('comma_delimiter', False) is True:
+                delimiter = ","
+            else:
+                delimiter = "|"
+
             command += ' "%s"'%(
-                "|".join([
+                delimiter.join([
                     str(x) for x in options
                 ])
             )
@@ -453,7 +463,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             self.checkFailure, failure='-1',
         ).addCallback( self.resultAsInt )
     def noop( self, message=None ):
-        """Send a null operation to the server
+        """Send a null operation to the server.  Any message sent
+        will be printed to the CLI.
 
         Returns deferred integer response code
         """
