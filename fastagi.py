@@ -364,7 +364,9 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         returns deferred (str(digits), bool(timedOut))
         """
         timeout *= 1000
-        command = '''GET DATA "%s" %s %s'''%(filename, timeout, maxDigits)
+        command = '''GET DATA "%s" %s'''%(filename, timeout)
+        if maxDigits is not None:
+            command = ' '.join([command, str(maxDigits)])
         return self.sendCommand( command ).addCallback(
             self.checkFailure, failure='-1',
         ).addCallback( self.resultPlusTimeoutFlag )
