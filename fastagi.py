@@ -168,6 +168,20 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         elif isinstance( date, time.struct_time ):
             date = time.mktime(date)
         return date
+    def onRecordingComplete( self, resultLine ):
+        """(Internal) Handle putative success, watch for failure-on-load problems"""
+        try:
+            digit,exitType,endposStuff = resultLine.split( ' ', 2 )
+        except ValueError, err:
+            pass
+        else:
+            digit = int(digit)
+            exitType = exitType.strip('()')
+            endposStuff = endposStuff.strip()
+            if endposStuff.startswith( 'endpos=' ):
+                endpos = int( endposStuff[7:].strip() )
+                return digit, exitType, endpos
+        raise ValueError( """Unexpected result on streaming completion: %r"""%(resultLine ))
     def onStreamingComplete( self,resultLine, skipMS=0 ):
         """(Internal) Handle putative success, watch for failure-on-load problems"""
         try:
@@ -561,13 +575,13 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         if silence is not None:
             command += ' s=%s'%(silence,)
         def onResult( resultLine ):
-            value, type, endpos = resultLine.split( ' ')
+            value, type, endpos = resultLine.split(' ')
             type = type.strip()[1:-1]
             endpos = int(endpos.split('=')[1])
             return (value, type, endpos)
         return self.sendCommand( command ).addCallback(
-            self.checkFailure, failure='-1',
-        ).addCallback( onResult )
+            self.onRecordingComplete
+        )
     def sayXXX( self, baseCommand, value, escapeDigits='' ):
         """Underlying implementation for the common-api sayXXX functions"""
         command = '%s %s %r'%( baseCommand, value, escapeDigits or '' )
