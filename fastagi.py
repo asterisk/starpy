@@ -792,38 +792,16 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         return self.sendCommand( command ).addCallback(
             self.resultAsInt,
         )
-    def waitForDigit( self, timeout, voicefile = None, escapeDigits = None, \
-        maxDigits = None, prevDieChars = None ):
-        """Wait up to timeout seconds while playing voicefile as long
-        prev_die_chars (default '#') are not typed in for 'escapeDigits'
-        (default '1234567890*#ABCD') are typed in 'maxDigits' (default 1)
-        times.
+    def waitForDigit( self, timeout ):
+        """Wait up to timeout seconds for single digit to be pressed
 
         timeout -- timeout in seconds or -1 for infinite timeout
             (Asterisk uses milliseconds)
-        WAIT FOR DIGIT <timeout> [<voicefile>] [<escapeDigits>]
-        [<maxDigits>] [<prevDieChars>]
 
         returns deferred 0 on timeout or digit
         """
-        if timeout != -1:
-            timeout *= 1000
-
-        command = "WAIT FOR DIGIT %s" % timeout
-        if voicefile is not None:
-            command += " %s" % voicefile
-
-        if escapeDigits is not None:
-            command += " %s" % escapeDigits
-
-        if maxDigits is not None:
-            command += " %s" % maxDigits
-
-        if prevDieChars is not None:
-            command += " %s" % prevDieChars
-
-        command += '\n'
-
+        timeout *= 1000
+        command = "WAIT FOR DIGIT %s"%(timeout,)
         return self.sendCommand( command ).addCallback(
             self.checkFailure, failure='-1',
         ).addCallback(
