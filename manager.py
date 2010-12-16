@@ -28,9 +28,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
         count -- total count of messages sent from this protocol
         hostName -- used along with count and ID to produce unique IDs
         messageCache -- stores incoming message fragments from the manager
+        id -- An identifier for this instance
     """
     count = 0
     amiVersion = None
+    id = None
     def __init__(self, *args, **named):
         """Initialise the AMIProtocol, arguments are ignored"""
         self.messageCache = []
@@ -402,6 +404,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         Uses factory.username and factory.secret
         """
+        self.id = self.factory.id
         return self.sendDeferred({
             'action': 'login',
             'username': self.factory.username,
@@ -655,9 +658,10 @@ class AMIFactory(protocol.ClientFactory):
     """A factory for AMI protocols
     """
     protocol = AMIProtocol
-    def __init__(self, username, secret):
+    def __init__(self, username, secret, id=None):
         self.username = username
         self.secret = secret
+        self.id = id
     def login(self, ip='localhost', port=5038, timeout=5):
         """Connect, returning our (singleton) protocol instance with login completed
 
@@ -665,7 +669,7 @@ class AMIFactory(protocol.ClientFactory):
         large numbers of protocols simultaneously
         """
         self.loginDefer = defer.Deferred()
-        reactor.connectTCP(ip,port,self, timeout=timeout)
+        reactor.connectTCP(ip, port, self, timeout=timeout)
         return self.loginDefer
     def clientConnectionFailed(self, connector, reason):
         """Connection failed, report to our callers"""
