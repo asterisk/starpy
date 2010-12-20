@@ -71,6 +71,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
                 Leave
                 AgentCalled
                 ParkedCall
+                UnParkedCall
+                ParkedCalls
                 Cdr
                 ParkedCallsComplete
                 QueueParams
@@ -485,6 +487,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Park channel"""
         message = {'action':'park','channel':channel,'channel2':channel2,'timeout':timeout}
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+    def parkedCall(self):
+        """Check for a ParkedCall event"""
+        message = {'action' : 'ParkedCall'}
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+    def unParkedCall(self):
+        """Check for an UnParkedCall event """
+        message = {'action' : 'UnParkedCall'}
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
     def parkedCalls(self):
         """Retrieve set of parked calls via multi-event callback"""
         message = {'action':'ParkedCalls'}
