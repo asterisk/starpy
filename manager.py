@@ -5,6 +5,7 @@ for basic control of the channels active on a given Asterisk server.
 
 Module defines a standard Python logging module log 'AMI'
 """
+
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 from twisted.internet import error as tw_error
