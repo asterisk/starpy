@@ -616,7 +616,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             self.onRecordingComplete
         )
 
-    def sayXXX self, baseCommand, value, escapeDigits=''):
+    def sayXXX(self, baseCommand, value, escapeDigits=''):
         """Underlying implementation for the common-api sayXXX functions"""
         command = '%s %s %r'%(baseCommand, value, escapeDigits or '')
         return self.sendCommand(command).addCallback(
