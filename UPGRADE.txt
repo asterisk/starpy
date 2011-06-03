@@ -1,0 +1,11 @@
+UPGRADE notes for starpy python module
+======================================
+
+- References to zaptel functions have been converted into
+  their DAHDI equivalents. For most of the functions, the 
+  first three letters of the old function names "zap", 
+  have been removed and replaced  with "dahdi".
+
+  i.e. zapDNDoff is now dahdiDNDoff
+
+  See CHANGES.txt for a complete list.

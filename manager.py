@@ -849,58 +849,58 @@ class AMIProtocol(basic.LineOnlyReceiver):
         }
         return self.collectDeferred(message, 'WaitEventComplete')
 
-    def zapDNDoff(self, channel):
-        """Toggles the do not disturb state on the specified Zap channel to off"""
+    def dahdiDNDoff(self, channel):
+        """Toggles the do not disturb state on the specified DAHDI channel to off"""
         messge = {
-            'action' : 'zapDNDoff',
+            'action' : 'DAHDIDNDoff',
             'channel' : channel
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def zapDNDon(self, channel):
-        """Toggles the do not disturb state on the specified Zap channel to on"""
+    def dahdiDNDon(self, channel):
+        """Toggles the do not disturb state on the specified DAHDI channel to on"""
         messge = {
-            'action' : 'zapDNDon',
+            'action' : 'DAHDIDNDon',
             'channel' : channel
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def zapDialOffhook(self, channel, number):
-        """Dials the specified number on the Zap channel while the phone is off-hook"""
+    def dahdiDialOffhook(self, channel, number):
+        """Dials the specified number on the DAHDI channel while the phone is off-hook"""
         message = {
-            'Action' : 'ZapDialOffhook',
-            'ZapChannel' : channel,
+            'Action' : 'DAHDIDialOffhook',
+            'DAHDIChannel' : channel,
             'Number' : number
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def zapHangup(self, channel):
-        """Hangs up the specified Zap channel"""
+    def dahdiHangup(self, channel):
+        """Hangs up the specified DAHDI channel"""
         message = {
-            'Action' : 'ZapHangup',
-            'ZapChannel' : channel
+            'Action' : 'DAHDIHangup',
+            'DAHDIChannel' : channel
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def zapRestart(self, channel):
-        """Completly restarts the Zaptel channels, terminating any calls in progress"""
+    def dahdiRestart(self, channel):
+        """Completly restarts the DAHDI channels, terminating any calls in progress"""
         message = {
-            'Action' : 'ZapRestart',
-            'ZapChannel' : channel
+            'Action' : 'DAHDIRestart',
+            'DAHDIChannel' : channel
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def zapShowChannels(self):
-        """List all zap channels"""
+    def dahdiShowChannels(self):
+        """List all DAHDI channels"""
         message = {
-            'action' : 'zapshowchannels'
+            'action' : 'DAHDIShowChannels'
         }
-        return self.collectDeferred(message, 'ZapShowChannelsComplete')
+        return self.collectDeferred(message, 'DAHDIShowChannelsComplete')
 
-    def zapTransfer(self, channel):
-        """Transfers zap channel"""
+    def dahdiTransfer(self, channel):
+        """Transfers DAHDI channel"""
         message = {
-            'Action' : 'ZapTransfer',
+            'Action' : 'DAHDITransfer',
             'channel' : channel
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
