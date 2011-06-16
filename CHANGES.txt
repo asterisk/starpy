@@ -1,0 +1,16 @@
+CHANGE notes for starpy python module
+======================================
+
+- References to zaptel functions have been converted into
+  their DAHDI equivalents. For most of the functions, the 
+  first three letters of the old function names "zap", 
+  have been removed and replaced  with "dahdi".
+
+     Old Zaptel Func.  |  New Zaptel Func.
+    ======================================
+    zapDNDon           | dahdiDNDon
+    zapDNDoff          | dahdiDNDoff
+    zapDialOffHook     | dahdiDialOffHook
+    zapHangup          | dahdiHangup
+    zapshowchannels    | dahdiShowChannels
+    zaptransfers       | dahdiTransfers
