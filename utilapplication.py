@@ -14,7 +14,6 @@
 # BSD 3-Clause License. See the LICENSE file at the top of the source tree for
 # details.
 
-
 """Class providing utility applications with common support code"""
 from basicproperty import common, propertied, basic, weak
 from ConfigParser import ConfigParser
