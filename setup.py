@@ -6,7 +6,7 @@
 #
 # Michael C. Fletcher <mcfletch@vrplumber.com>
 #
-# See http://asterisk-org.github.org/starpy for more information about the
+# See http://asterisk-org.github.com/starpy/ for more information about the
 # StarPy project. Please do not directly contact any of the maintainers of this
 # project for assistance; the project provides a web site, mailing lists and
 # IRC channels for your use.
