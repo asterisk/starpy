@@ -1,5 +1,5 @@
 include MANIFEST.in
-include license.txt
+include LICENSE
 include *.py
 include doc/*
 include doc/style/*
