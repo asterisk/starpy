@@ -353,7 +353,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         message = {
             'Action' : 'AgentLogoff',
             'Agent' : agent,
-            'Soft':soft
+            'Soft' : soft
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
@@ -392,6 +392,25 @@ class AMIProtocol(basic.LineOnlyReceiver):
             return message[' ']
 
         return df.addCallback(onResult)
+
+    def dbDel(self, family, key):
+        """Delete key value in the AstDB database"""
+        message = {
+            'Action' : 'DBDel',
+            'Family' : family,
+            'Key' : key
+        }
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+    def dbDelTree(self, family, key=None):
+        """Delete key value or key tree in the AstDB database"""
+        message = {
+            'Action' : 'DBDelTree',
+            'Family' : family
+        }
+        if key is not None:
+            message['Key'] = key
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def dbGet(self, family, key):
         """This action retrieves a value from the AstDB database"""
