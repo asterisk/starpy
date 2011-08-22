@@ -353,7 +353,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         message = {
             'Action' : 'AgentLogoff',
             'Agent' : agent,
-            'Soft' : soft
+            'Soft':soft
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
