@@ -129,7 +129,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
                     log.error("""Invalid variable line: %r""", line)
                 else:
                     self.variables[ key.lower() ] = value
-                    log.info("""%s = %r""", key,value)
+                    log.debug("""%s = %r""", key, value)
         else:
             try:
                 df = self.pendingMessages.pop(0)
