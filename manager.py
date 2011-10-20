@@ -330,7 +330,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         If == expected, returns the message
         """
-        if message['response'] != expected:
+        if type(message).__name__ == 'dict' and message['response'] != expected:
             raise error.AMICommandFailure(message)
         return message
 
