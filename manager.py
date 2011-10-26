@@ -314,7 +314,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         def onEvent(event):
             if event.get('response') == 'Error':
                 df.errback(error.AMICommandFailure(event))
-            elif event['event'] == stopEvent:
+            elif event.get('event') == stopEvent:
                 df.callback(cache)
             else:
                 cache.append(event)
