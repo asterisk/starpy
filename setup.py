@@ -47,37 +47,37 @@ if __name__ == "__main__":
         result = []
         allResults = []
         for name in os.listdir(dirname):
-            path = os.path.join( dirname, name )
-            if os.path.isfile( path) and os.path.splitext( name )[1] not in ('.py','.pyc','.pyo') and name!='starpy.conf':
-                result.append( path )
-            elif os.path.isdir( path ) and name.lower() !='cvs':
-                allResults.extend( npFilesFor(path))
+            path = os.path.join(dirname, name)
+            if os.path.isfile(path) and os.path.splitext(name)[1] not in ('.py', '.pyc', '.pyo') and name != 'starpy.conf':
+                result.append(path)
+            elif os.path.isdir(path) and name.lower() !='cvs':
+                allResults.extend(npFilesFor(path))
         if result:
-            allResults.append( (dirname, result))
+            allResults.append((dirname, result))
         return allResults
-    dataFiles = npFilesFor( 'doc') + npFilesFor( 'examples') + [('.',('LICENSE',))]
+    dataFiles = npFilesFor('doc') + npFilesFor('examples') + [('.', ('LICENSE',))]
     dataFiles = [
-        (os.path.join('starpy',directory), files)
-        for (directory,files) in dataFiles
+        (os.path.join('starpy', directory), files)
+        for (directory, files) in dataFiles
     ]
 
     from sys import hexversion
     if hexversion >= 0x2030000:
         # work around distutils complaints under Python 2.2.x
         extraArguments = {
-            'classifiers': [
+            'classifiers' : [
                 """License :: OSI Approved :: BSD License""",
                 """Programming Language :: Python""",
                 """Topic :: Software Development :: Libraries :: Python Modules""",
                 """Intended Audience :: Developers""",
             ],
-            'keywords': 'asterisk,fastagi,twisted,protocol,manager,ami',
+            'keywords' : 'asterisk,fastagi,twisted,protocol,manager,ami',
             'long_description' : """Twisted Protocols for interaction with Asterisk PBX
 
 Provides Asterisk AMI and Asterisk FastAGI protocols under Twisted,
 allowing for fairly extensive customisation of Asterisk operations
 from a Twisted process.""",
-            'platforms': ['Any'],
+            'platforms' : ['Any'],
         }
     else:
         extraArguments = {
@@ -86,25 +86,29 @@ from a Twisted process.""",
     setup (
         name = "starpy",
         version = '1.0.0b1',
-        url = "http://starpy.sourceforge.net",
-        download_url = "http://sourceforge.net/project/showfiles.php?group_id=164040",
+        url = "http://asterisk-org.github.com/starpy/",
         description = "Twisted Protocols for interaction with the Asterisk PBX",
         author = "Mike C. Fletcher",
         author_email = "mcfletch@vrplumber.com",
         license = "BSD",
 
         package_dir = {
-            'starpy':'.',
+            'starpy' : '.',
         },
         packages = [
             'starpy',
             'starpy.examples',
         ],
         options = {
-            'sdist':{'force_manifest':1,'formats':['gztar','zip'],},
+            'sdist' : {
+                'force_manifest' : 1,
+                'formats' : ['gztar', 'zip'],
+            },
         },
         data_files = dataFiles,
-        cmdclass = {'install_data':smart_install_data},
+        cmdclass = {
+            'install_data' : smart_install_data
+        },
         **extraArguments
     )
 
