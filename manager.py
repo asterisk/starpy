@@ -619,7 +619,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         variable -- variables associated to the call
         async -- make the origination asynchronous
         """
-        variable = '|'.join(["%s=%s" % (x[0], x[1]) for x in variable.items()])
+        variable = ','.join(["%s=%s" % (x[0], x[1]) for x in variable.items()])
         message = dict([(k,v) for (k,v) in {
             'action' : 'originate',
             'channel' : channel,
