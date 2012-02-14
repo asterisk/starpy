@@ -31,7 +31,8 @@ in standard locations on the server, complicates install)
 """
 from twisted.application import service, internet
 from twisted.internet import reactor, defer
-from starpy import manager, fastagi, utilapplication, error
+from starpy import manager, fastagi, error
+import utilapplication
 import os, logging, pprint, time
 from basicproperty import common, propertied, basic
 

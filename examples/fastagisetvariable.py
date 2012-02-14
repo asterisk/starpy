@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 """Try to set a FastAGI variable"""
 from twisted.internet import reactor
-from starpy import fastagi, utilapplication
+from starpy import fastagi
+import utilapplication
 import logging, time
 
 log = logging.getLogger( 'hellofastagi' )
