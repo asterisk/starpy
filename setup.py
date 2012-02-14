@@ -55,7 +55,7 @@ if __name__ == "__main__":
         if result:
             allResults.append((dirname, result))
         return allResults
-    dataFiles = npFilesFor('doc') + npFilesFor('examples') + [('.', ('LICENSE',))]
+    dataFiles = npFilesFor('doc') + npFilesFor('examples')
     dataFiles = [
         (os.path.join('starpy', directory), files)
         for (directory, files) in dataFiles
