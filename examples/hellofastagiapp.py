@@ -5,7 +5,8 @@ This is basically identical to hellofastagi, save that it uses the application
 framework to allow for configuration-file-based setup of the AGI service.
 """
 from twisted.internet import reactor
-from starpy import fastagi, utilapplication
+from starpy import fastagi
+import utilapplication
 import logging, time
 
 log = logging.getLogger( 'hellofastagi' )
