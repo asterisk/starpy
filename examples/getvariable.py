@@ -2,7 +2,8 @@
 """Demonstrate usage of getVariable on the agi interface...
 """
 from twisted.internet import reactor
-from starpy import fastagi, utilapplication
+from starpy import fastagi
+import utilapplication
 import logging, time, pprint
 
 log = logging.getLogger( 'hellofastagi' )

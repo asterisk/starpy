@@ -2,7 +2,9 @@
 """Sample application to test the menuing utility classes"""
 from twisted.application import service, internet
 from twisted.internet import reactor, defer
-from starpy import manager, fastagi, utilapplication, menu, error
+from starpy import manager, fastagi, error
+import utilapplication
+import menu
 import os, logging, pprint, time
 
 log = logging.getLogger( 'menutest' )

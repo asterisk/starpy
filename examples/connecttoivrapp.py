@@ -3,7 +3,8 @@
 This version of the script uses the utilapplication framework and is
 pared down for presentation on a series of slides
 """
-from starpy import manager, utilapplication
+from starpy import manager
+import utilapplication
 from twisted.internet import reactor
 import sys, logging
 APPLICATION = utilapplication.UtilApplication()
