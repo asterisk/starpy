@@ -97,7 +97,6 @@ from a Twisted process.""",
         },
         packages = [
             'starpy',
-            'starpy.examples',
         ],
         options = {
             'sdist' : {
