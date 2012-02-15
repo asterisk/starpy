@@ -1,3 +1,19 @@
+commit 26af20f76f555f625fceddd95625479a133aa86e
+Author: Paul Belanger <paul.belanger@polybeacon.com>
+Date:   Wed Feb 15 10:45:42 2012 -0500
+
+    Don't build and install examples
+    
+    Signed-off-by: Paul Belanger <paul.belanger@polybeacon.com>
+
+commit 158609b5d8d10021fa11f6d9bddd90ba093158c3
+Author: Paul Belanger <paul.belanger@polybeacon.com>
+Date:   Wed Feb 15 10:13:31 2012 -0500
+
+    Update ChangeLog
+    
+    Signed-off-by: Paul Belanger <paul.belanger@polybeacon.com>
+
 commit 56ae6b982e0086ca3c0d7e37265122094476a91c
 Author: Paul Belanger <paul.belanger@polybeacon.com>
 Date:   Wed Feb 15 09:53:51 2012 -0500
