@@ -764,11 +764,15 @@ class AMIProtocol(basic.LineOnlyReceiver):
         #return self.collectDeferred(message, 'QueueStatusEnd')
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def queueStatus(self):
+    def queueStatus(self, queue=None, member=None):
         """Retrieve information about active queues via multiple events"""
         message = {
             'action': 'queuestatus'
         }
+        if queue is not None:
+            message.update({'queue': queue})
+        if member is not None:
+            message.update({'member': member})
         return self.collectDeferred(message, 'QueueStatusComplete')
 
     def redirect(self, channel, context, exten, priority, extraChannel=None):
