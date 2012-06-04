@@ -71,16 +71,13 @@ archive</a> to a temporary directory and run:</p>
 will need <a href="http://www.python.org/">Python</a> 2.3+ and
 <a href="http://twistedmatrix.com/">Twisted</a> (Core) installed.
 You'll need <a href="http://basicproperty.sourceforge.net/">BasicProperty</a>
-as well.&nbsp; If you want to check out the SVN version instead of a
+as well.&nbsp; If you want to check out the GIT version instead of a
 released version, use:</p>
 
 
-<pre>svn co https://svn.sourceforge.net/svnroot/starpy/trunk starpy<br></pre>
-
+<pre>git clone https://github.com/asterisk-org/starpy.git</pre>
 
 <p>On your PythonPath.</p>
-
-
 <p>The demonstration applications use the <a href="pydoc/starpy.utilapplication.html">utilapplication</a> module,
 which uses configuration-file-based setup of the AMI and FastAGI
 servers.&nbsp; To use this, create a starpy.conf file for the current
@@ -91,11 +88,9 @@ file(s) looks like this:</p>
 
 <pre>[AMI]<br>username=AMIUSERNAME<br>secret=AMIPASSWORD<br>server=127.0.0.1<br>port=5038<br><br>[FastAGI]<br>port=4573<br>interface=127.0.0.1<br>context=survey<br></pre>
 
-
 <p>Keep in mind that FastAGI applications are neither encrypting nor
 authenticating; you probably should not expose them on any interface
 other than local (127.0.0.1)!</p>
-
 
 <h2>Asterisk Manager Interface
 (AMI) Usage</h2>
@@ -690,12 +685,7 @@ coverage of the APIs should be close to complete.</li>
 <h2>License</h2>
 
 
-<p>StarPy is licensed under
-extremely liberal terms.<br>
-
-
-</p>
-
+<p>StarPy is licensed under extremely liberal terms.</p>
 
 <pre>Copyright (c) 2006, Michael C. Fletcher and Contributors<br>All rights reserved.<br><br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions<br>are met:<br><br>	Redistributions of source code must retain the above copyright<br>	notice, this list of conditions and the following disclaimer.<br><br>	Redistributions in binary form must reproduce the above<br>	copyright notice, this list of conditions and the following<br>	disclaimer in the documentation and/or other materials<br>	provided with the distribution.<br><br>	The name of Michael C. Fletcher, or the name of any Contributor,<br>	may not be used to endorse or promote products derived from this <br>	software without specific prior written permission.<br><br>THIS SOFTWARE IS NOT FAULT TOLERANT AND SHOULD NOT BE USED IN ANY<br>SITUATION ENDANGERING HUMAN LIFE OR PROPERTY.<br><br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS<br>FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE<br>COPYRIGHT HOLDERS AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT,<br>INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES<br>(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR<br>SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)<br>HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,<br>STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)<br>ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED<br>OF THE POSSIBILITY OF SUCH DAMAGE.<br></pre><p>Contributors include (contributors with an (*) after their name are generally available for consulting work):</p><ul><li><a href="mailto:mcfletch@vrplumber.com">Mike C. Fletcher</a> (VRPlumber Consulting Inc., Canada)</li><li><a href="mailto:godson.g@gmail.com">Godson Gera</a> </li></ul>
 
