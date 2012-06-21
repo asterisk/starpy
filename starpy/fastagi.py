@@ -847,7 +847,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         command = 'STREAM FILE "%s" %r' % (filename, escapeDigits)
         if offset is not None:
             command += ' %s' % (offset)
-        return  self.sendCommand(command).addCallback(
+        return self.sendCommand(command).addCallback(
             self.checkFailure, failure='-1',
         ).addCallback(self.onStreamingComplete, skipMS=offset)
 

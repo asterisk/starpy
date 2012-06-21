@@ -1,1 +1,4 @@
 build
+starpy.egg-info
+.tox
+*.pyc
