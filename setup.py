@@ -15,7 +15,7 @@
 # BSD 3-Clause License. See the LICENSE file at the top of the source tree for
 # details.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 VERSION = '1.0.1'
 
@@ -29,13 +29,14 @@ setup(
     long_description=open('README.txt').read(),
     keywords='asterisk manager fastagi twisted AMI',
     url='http://asterisk-org.github.com/starpy',
-    packages=['starpy'],
-    package_dir={'starpy': '.'},
+    packages=find_packages(),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
     ],
 
 )
