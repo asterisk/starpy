@@ -746,6 +746,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
+    def queuePenalty(self, interface, penalty, queue=None):
+        """Set penalty for interface"""
+        message = {
+            'action': 'queuepenalty',
+            'interface': interface,
+            'penalty': penalty
+        }
+        if queue is not None:
+            message.update({'queue': queue})
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
     def queueRemove(self, queue, interface):
         """Remove given interface from named queue"""
         message = {
