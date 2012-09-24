@@ -718,7 +718,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def queueAdd(self, queue, interface, penalty=0, paused=True):
+    def queueAdd(self, queue, interface, penalty=0, paused=True,
+                 membername=None, stateinterface=None):
         """Add given interface to named queue"""
         if paused in (True, 'true', 1):
             paused = 'true'
@@ -731,6 +732,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'penalty': penalty,
             'paused': paused
         }
+        if membername is not None:
+            message['membername']=membername
+        if stateinterface is not None:
+            message['stateinterface']=stateinterface
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def queuePause(self, queue, interface, paused=True):
