@@ -495,7 +495,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def getVar(self, channel, variable):
-        """Retrieve the given variable from the channel"""
+        """Retrieve the given variable from the channel.
+
+        If channel is None, this gets a global variable."""
 
         def extractVariable(message):
             """When message comes in, extract the variable from it"""
@@ -511,9 +513,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         message = {
             'action': 'getvar',
-            'channel': channel,
             'variable': variable
         }
+        # channel is optional
+        if channel:
+            message['channel'] = channel
         return self.sendDeferred(
             message
         ).addCallback(
@@ -818,13 +822,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def setVar(self, channel, variable, value):
-        """Set channel variable to given value"""
+        """Set channel variable to given value.
+
+        If channel is None, this sets a global variable."""
         message = {
             'action': 'setvar',
-            'channel': channel,
             'variable': variable,
             'value': value
         }
+        # channel is optional
+        if channel:
+            message['channel'] = channel
         return self.sendDeferred(
             message
         ).addCallback(
