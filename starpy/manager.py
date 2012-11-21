@@ -737,9 +737,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'paused': paused
         }
         if membername is not None:
-            message['membername']=membername
+            message['membername'] = membername
         if stateinterface is not None:
-            message['stateinterface']=stateinterface
+            message['stateinterface'] = stateinterface
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def queuePause(self, queue, interface, paused=True):
