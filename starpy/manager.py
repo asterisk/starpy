@@ -742,7 +742,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             message['stateinterface'] = stateinterface
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
-    def queuePause(self, queue, interface, paused=True):
+    def queuePause(self, queue, interface, paused=True, reason=None):
         if paused in (True, 'true', 1):
             paused = 'true'
         else:
@@ -753,6 +753,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'interface': interface,
             'paused': paused
         }
+        if reason is not None:
+            message['reason'] = reason
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def queuePenalty(self, interface, penalty, queue=None):
