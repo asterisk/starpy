@@ -1,4 +1,5 @@
-# StarPy Asterisk Protocols for Twisted
+StarPy Asterisk Protocols for Twisted
+=====================================
 
 StarPy is a Python + Twisted protocol that provides access to the Asterisk
 PBX's Manager Interface (AMI) and Fast Asterisk Gateway Interface (FastAGI).
