@@ -26,7 +26,7 @@ setup(
     author_email='mcfletch@vrplumber.com',
     description='Twisted Protocols for interaction with the Asterisk PBX',
     license='BSD',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     keywords='asterisk manager fastagi twisted AMI',
     url='http://asterisk-org.github.com/starpy',
     packages=find_packages(),
