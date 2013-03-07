@@ -938,7 +938,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def dahdiDNDoff(self, channel):
         """Toggles the DND state on the specified DAHDI channel to off"""
-        messge = {
+        message = {
             'action': 'DAHDIDNDoff',
             'channel': channel
         }
@@ -946,7 +946,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def dahdiDNDon(self, channel):
         """Toggles the DND state on the specified DAHDI channel to on"""
-        messge = {
+        message = {
             'action': 'DAHDIDNDon',
             'channel': channel
         }
