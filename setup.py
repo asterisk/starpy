@@ -28,7 +28,7 @@ setup(
     license='BSD',
     long_description=open('README.rst').read(),
     keywords='asterisk manager fastagi twisted AMI',
-    url='http://asterisk-org.github.com/starpy',
+    url='https://github.com/asterisk/starpy',
     packages=find_packages(),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
