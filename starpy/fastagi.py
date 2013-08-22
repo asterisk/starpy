@@ -319,6 +319,23 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             self.checkFailure,
         ).addCallback(self.resultAsInt)
 
+    def onControlStreamFileComplete(self, resultLine):
+        """(Internal) Handle CONTROL STREAM FILE results.
+
+        Asterisk 12 introduces 'endpos=' to the result line.
+        """
+        parts = resultLine.split(' ', 1)
+        result = int(parts[0])
+        endpos = None # Default if endpos isn't specified
+        if len(parts) == 2:
+            endposStuff = parts[1].strip()
+            if endposStuff.startswith('endpos='):
+                endpos = int(endposStuff[7:])
+            else:
+                log.error("Unexpected response to 'control stream file': %s",
+                          resultLine)
+        return result, endpos
+
     def controlStreamFile(
             self, filename, escapeDigits,
             skipMS=0, ffChar='*', rewChar='#', pauseChar=None,
@@ -342,7 +359,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         if pauseChar:
             command += ' %r' % (pauseChar)
 
-        return self.sendCommand(command).addCallback(self.checkFailure)
+        return self.sendCommand(command).addCallback(self.checkFailure) \
+            .addCallback(self.onControlStreamFileComplete)
 
     def databaseDel(self, family, key):
         """Delete the given key from the database
