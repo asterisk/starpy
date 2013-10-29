@@ -759,6 +759,21 @@ class AMIProtocol(basic.LineOnlyReceiver):
             message['stateinterface'] = stateinterface
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
+    def queueLog(self, queue, event, uniqueid=None, interface=None, msg=None):
+        """Adds custom entry in queue_log"""
+        message = {
+            'action': 'queuelog',
+            'queue': queue,
+            'event': event
+        }
+        if uniqueid is not None:
+            message['uniqueid'] = uniqueid
+        if interface is not None:
+            message['interface'] = interface
+        if msg is not None:
+            message['message'] = msg
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
     def queuePause(self, queue, interface, paused=True, reason=None):
         if paused in (True, 'true', 1):
             paused = 'true'
