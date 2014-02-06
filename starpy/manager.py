@@ -406,6 +406,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         return df.addCallback(onResult)
 
+    def action(self, action, **action_args):
+        """Sends an arbitrary action to the AMI"""
+        #action_args will be ar least an empty dict so we build the message from it.
+        action_args['action'] = action
+        return self.sendDeferred(action_args).addCallback(self.errorUnlessResponse)
+
+
     def dbDel(self, family, key):
         """Delete key value in the AstDB database"""
         message = {
