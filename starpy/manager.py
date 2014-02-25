@@ -1010,7 +1010,7 @@ class AMIFactory(protocol.ClientFactory):
         self.secret = secret
         self.id = id
 
-    def login(self, ip='localhost', port=5038, timeout=5):
+    def login(self, ip='localhost', port=5038, timeout=5, bindAddress=None):
         """Connect and return protocol instance
 
         Connect and return our (singleton) protocol instance with login
@@ -1020,7 +1020,8 @@ class AMIFactory(protocol.ClientFactory):
         large numbers of protocols simultaneously
         """
         self.loginDefer = defer.Deferred()
-        reactor.connectTCP(ip, port, self, timeout=timeout)
+        reactor.connectTCP(ip, port, self, timeout=timeout,
+                           bindAddress=bindAddress)
         return self.loginDefer
 
     def clientConnectionFailed(self, connector, reason):
