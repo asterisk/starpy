@@ -632,7 +632,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def originate(
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
-            data=None, variable={}, async=False
+            data=None, variable={}, async=False, channelid=None,
+			otherchannelid=None
         ):
         """Originate call to connect channel to given context/exten/priority
 
@@ -661,7 +662,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'application': application,
             'data': data,
             'variable': variable,
-            'async': str(async)
+            'async': str(async),
+            'channelid': channelid,
+            'otherchannelid': otherchannelid
         }.items() if v is not None])
         if 'timeout' in message:
             message['timeout'] = message['timeout'] * 1000
