@@ -569,10 +569,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
                 raise error.AMICommandFailure(challenge)
             key_value = md5('%s%s' % (challenge['challenge'], self.factory.secret)).hexdigest()
             return self.sendDeferred({
-                'action':   'Login',
+                'action': 'Login',
                 'authtype': 'MD5',
                 'username': self.factory.username,
-                'key':      key_value,
+                'key': key_value,
             }).addCallback(self.errorUnlessResponse)
         self.id = self.factory.id
         return self.sendDeferred({
