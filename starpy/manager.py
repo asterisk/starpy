@@ -27,6 +27,7 @@ from twisted.protocols import basic
 from twisted.internet import error as tw_error
 import socket
 import logging
+from hashlib import md5
 from starpy import error
 
 
@@ -161,7 +162,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
         XXX Should probably use proper Twisted-style credential negotiations
         """
         log.info('Connection Made')
-        df = self.login()
+        if self.factory.plaintext_login:
+            df = self.login()
+        else:
+            df = self.loginChallengeResponse()
 
         def onComplete(message):
             """Check for success, errback or callback as appropriate"""
@@ -552,6 +556,29 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'username': self.factory.username,
             'secret': self.factory.secret,
         }).addCallback(self.errorUnlessResponse)
+
+    def loginChallengeResponse(self):
+        """Log into the AMI interface with challenge-response.
+
+        Follows the same approach as self.login() using factory.username and factory.secret.
+        Also done automatically on connection: will be called instead of self.login() if
+        factory.plaintext_login is False: see AMIFactory constructor.
+        """
+        def sendResponse(challenge):
+            if not type(challenge) is dict or not 'challenge' in challenge:
+                raise error.AMICommandFailure(challenge)
+            key_value = md5('%s%s' % (challenge['challenge'], self.factory.secret)).hexdigest()
+            return self.sendDeferred({
+                'action':   'Login',
+                'authtype': 'MD5',
+                'username': self.factory.username,
+                'key':      key_value,
+            }).addCallback(self.errorUnlessResponse)
+        self.id = self.factory.id
+        return self.sendDeferred({
+            'action':   'Challenge',
+            'authtype': 'MD5',
+        }).addCallback(sendResponse)
 
     def listCommands(self):
         """List the set of commands available
@@ -1008,10 +1035,11 @@ class AMIFactory(protocol.ClientFactory):
     """
     protocol = AMIProtocol
 
-    def __init__(self, username, secret, id=None):
+    def __init__(self, username, secret, id=None, plaintext_login=True):
         self.username = username
         self.secret = secret
         self.id = id
+        self.plaintext_login = plaintext_login
 
     def login(self, ip='localhost', port=5038, timeout=5, bindAddress=None):
         """Connect and return protocol instance
