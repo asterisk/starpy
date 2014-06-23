@@ -576,7 +576,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             }).addCallback(self.errorUnlessResponse)
         self.id = self.factory.id
         return self.sendDeferred({
-            'action':   'Challenge',
+            'action': 'Challenge',
             'authtype': 'MD5',
         }).addCallback(sendResponse)
 
