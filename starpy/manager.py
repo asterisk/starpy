@@ -423,6 +423,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         return df.addCallback(onResult)
 
+    def action(self, action, **action_args):
+        """Sends an arbitrary action to the AMI"""
+        #action_args will be ar least an empty dict so we build the message from it.
+        action_args['action'] = action
+        return self.sendDeferred(action_args).addCallback(self.errorUnlessResponse)
+
+
     def dbDel(self, family, key):
         """Delete key value in the AstDB database"""
         message = {
@@ -642,7 +649,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def originate(
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
-            data=None, variable={}, async=False
+            data=None, variable={}, async=False, channelid=None,
+			otherchannelid=None
         ):
         """Originate call to connect channel to given context/exten/priority
 
@@ -671,7 +679,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'application': application,
             'data': data,
             'variable': variable,
-            'async': str(async)
+            'async': str(async),
+            'channelid': channelid,
+            'otherchannelid': otherchannelid
         }.items() if v is not None])
         if 'timeout' in message:
             message['timeout'] = message['timeout'] * 1000
@@ -1035,7 +1045,7 @@ class AMIFactory(protocol.ClientFactory):
         self.secret = secret
         self.id = id
 
-    def login(self, ip='localhost', port=5038, timeout=5):
+    def login(self, ip='localhost', port=5038, timeout=5, bindAddress=None):
         """Connect and return protocol instance
 
         Connect and return our (singleton) protocol instance with login
@@ -1045,7 +1055,8 @@ class AMIFactory(protocol.ClientFactory):
         large numbers of protocols simultaneously
         """
         self.loginDefer = defer.Deferred()
-        reactor.connectTCP(ip, port, self, timeout=timeout)
+        reactor.connectTCP(ip, port, self, timeout=timeout,
+                           bindAddress=bindAddress)
         return self.loginDefer
 
     def clientConnectionFailed(self, connector, reason):
