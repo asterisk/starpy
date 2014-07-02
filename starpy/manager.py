@@ -32,6 +32,15 @@ from starpy import error
 
 log = logging.getLogger('AMI')
 
+class deferredErrorResp(defer.Deferred):
+    """A subclass of defer.Deferred that adds a registerError method
+    to handle function callback when an Error response happens"""
+    _errorRespCallback = None
+    def registerError(self, function ):
+        """Add function for Error response callback"""
+        self._errorRespCallback = function
+        log.debug('Registering function %s to handle Error response'
+                  % (function))
 
 class AMIProtocol(basic.LineOnlyReceiver):
     """Protocol for the interfacing with the Asterisk Manager Interface (AMI)
@@ -283,13 +292,19 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         Returns deferred that fires when a response to this message is received
         """
-        df = defer.Deferred()
+        df = deferredErrorResp()
         actionid = self.sendMessage(message, df.callback)
         df.addCallbacks(
-            self.cleanup, self.cleanup,
-            callbackArgs=(actionid,), errbackArgs=(actionid,)
+            self.checkErrorResponse, self.cleanup,
+            callbackArgs=(actionid, df,), errbackArgs=(actionid,)
         )
         return df
+    def checkErrorResponse(self, result, actionid, df):
+        """Check for error response and callback"""
+        self.cleanup( result, actionid)
+        if result.get('response') == 'Error' and df._errorRespCallback:
+            df._errorRespCallback(result)
+        return result
 
     def cleanup(self, result, actionid):
         """Cleanup callbacks on completion"""
@@ -438,14 +453,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         def extractValue(ami, event):
             value = event['val']
+            self.deregisterEvent("DBGetResponse", extractValue)
             return df.callback(value)
-
+        def errorResponse( message ):
+            self.deregisterEvent("DBGetResponse", extractValue)
+            return df.callback(None)
         message = {
             'Action': 'DBGet',
             'family': family,
             'key': key
         }
-        self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+        self.sendDeferred(message).registerError(errorResponse)
         self.registerEvent("DBGetResponse", extractValue)
         return df
 
