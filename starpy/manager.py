@@ -307,7 +307,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         if type(message) == list:
             actionid = next((value for header, value in message
                              if str(header.lower()) == 'actionid'), None)
-            if not actionid:
+            if actionid is None:
                 actionid = self.generateActionId()
                 message.append(['actionid', str(actionid)])
             if responseCallback:
