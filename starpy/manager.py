@@ -305,13 +305,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
         returns the actionid for the message
         """
         if type(message) == list:
-            actionid = [value for header, value in message
-                        if str(header.lower()) == 'actionid']
+            actionid = next((value for header, value in message
+                             if str(header.lower()) == 'actionid'), None)
             if not actionid:
                 actionid = self.generateActionId()
                 message.append(['actionid', str(actionid)])
-            else:
-                actionid = actionid[0]
             if responseCallback:
                 self.actionIDCallbacks[actionid] = responseCallback
             log.debug("""MSG OUT: %s""", message)
