@@ -346,6 +346,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if event.get('response') == 'Error':
                 df.errback(error.AMICommandFailure(event))
             elif event.get('event') == stopEvent:
+                cache.append(event)
                 df.callback(cache)
             else:
                 cache.append(event)
