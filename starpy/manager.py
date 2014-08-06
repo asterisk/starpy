@@ -323,16 +323,31 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
         returns the actionid for the message
         """
-        message = dict([(k.lower(), v) for (k, v) in message.items()])
-        if 'actionid' not in message:
-            message['actionid'] = self.generateActionId()
-        if responseCallback:
-            self.actionIDCallbacks[message['actionid']] = responseCallback
-        log.debug("""MSG OUT: %s""", message)
-        for key, value in message.items():
-            self.sendLine('%s: %s' % (str(key.lower()), str(value)))
+        if type(message) == list:
+            actionid = next((value for header, value in message
+                             if str(header.lower()) == 'actionid'), None)
+            if actionid is None:
+                actionid = self.generateActionId()
+                message.append(['actionid', str(actionid)])
+            if responseCallback:
+                self.actionIDCallbacks[actionid] = responseCallback
+            log.debug("""MSG OUT: %s""", message)
+            for item in message:
+                self.sendLine('%s: %s' % (str(item[0].lower()), str(item[1])))
+        else:
+            message = dict([(k.lower(), v) for (k, v) in message.items()])
+            if 'actionid' not in message:
+                message['actionid'] = self.generateActionId()
+            if responseCallback:
+                self.actionIDCallbacks[message['actionid']] = responseCallback
+            log.debug("""MSG OUT: %s""", message)
+            for key, value in message.items():
+                self.sendLine('%s: %s' % (str(key.lower()), str(value)))
         self.sendLine('')
-        return message['actionid']
+        if type(message) == list:
+            return actionid
+        else:
+            return message['actionid']
 
     def collectDeferred(self, message, stopEvent):
         """Collect all responses to this message until stopEvent or error
@@ -796,6 +811,21 @@ class AMIProtocol(basic.LineOnlyReceiver):
             message['membername'] = membername
         if stateinterface is not None:
             message['stateinterface'] = stateinterface
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
+    def queueLog(self, queue, event, uniqueid=None, interface=None, msg=None):
+        """Adds custom entry in queue_log"""
+        message = {
+            'action': 'queuelog',
+            'queue': queue,
+            'event': event
+        }
+        if uniqueid is not None:
+            message['uniqueid'] = uniqueid
+        if interface is not None:
+            message['interface'] = interface
+        if msg is not None:
+            message['message'] = msg
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def queuePause(self, queue, interface, paused=True, reason=None):
