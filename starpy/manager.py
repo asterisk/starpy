@@ -710,25 +710,24 @@ class AMIProtocol(basic.LineOnlyReceiver):
         variable -- variables associated to the call
         async -- make the origination asynchronous
         """
-        variable = ','.join(["%s=%s" % (x[0], x[1]) for x in variable.items()])
-        message = dict([(k, v) for (k, v) in {
-            'action': 'originate',
-            'channel': channel,
-            'context': context,
-            'exten': exten,
-            'priority': priority,
-            'timeout': timeout,
-            'callerid': callerid,
-            'account': account,
-            'application': application,
-            'data': data,
-            'variable': variable,
-            'async': str(async),
-            'channelid': channelid,
-            'otherchannelid': otherchannelid
-        }.items() if v is not None])
-        if 'timeout' in message:
-            message['timeout'] = message['timeout'] * 1000
+        message = [(k, v) for (k, v) in (
+            ('action', 'originate'),
+            ('channel', channel),
+            ('context', context),
+            ('exten', exten),
+            ('priority', priority),
+            ('callerid', callerid),
+            ('account', account),
+            ('application', application),
+            ('data', data),
+            ('async', str(async)),
+            ('channelid', channelid),
+            ('otherchannelid', otherchannelid),
+        ) if v is not None]
+        if timeout is not None:
+            message.append(('timeout', timeout*1000))
+        for var_name, var_value in variable.items():
+            message.append(('variable', '%s=%s' % (var_name, var_value)))
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def park(self, channel, channel2, timeout):
