@@ -214,6 +214,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         self.actionIDCallbacks.clear()
         self.eventTypeCallbacks.clear()
     VERSION_PREFIX = 'Asterisk Call Manager'
+    END_DATA = '--END COMMAND--'
 
     def dispatchIncoming(self):
         """Dispatch any finished incoming events/messages"""
@@ -223,23 +224,27 @@ class AMIProtocol(basic.LineOnlyReceiver):
             line = self.messageCache.pop(0)
             line = line.strip()
             if line:
-                if line.startswith(self.VERSION_PREFIX):
-                    self.amiVersion = line[
-                                len(self.VERSION_PREFIX) + 1:].strip()
+                if line.endswith(self.END_DATA):
+                    # multi-line command results...
+                    message.setdefault(' ', []).extend([
+                        l for l in line.split('\n')
+                                if (l and l != self.END_DATA)
+                    ])
                 else:
-                    try:
-                        key, value = line.split(':', 1)
-                    except ValueError, err:
-                        # XXX data-safety issues, what prevents the
-                        # VERSION_PREFIX from showing up in a data-set?
-                        log.warn("Improperly formatted line received and "
-                                 "ignored: %r", line)
+                    # regular line...
+                    if line.startswith(self.VERSION_PREFIX):
+                        self.amiVersion = line[
+                                    len(self.VERSION_PREFIX) + 1:].strip()
                     else:
-                        key = key.lower().strip()
-                        if key in message:
-                            message[key] += "\r\n" + value.strip()
+                        try:
+                            key, value = line.split(':', 1)
+                        except ValueError, err:
+                            # XXX data-safety issues, what prevents the
+                            # VERSION_PREFIX from showing up in a data-set?
+                            log.warn("Improperly formatted line received and "
+                                     "ignored: %r", line)
                         else:
-                            message[key] = value.strip()
+                            message[key.lower().strip()] = value.strip()
         log.debug('Incoming Message: %s', message)
         if 'actionid' in message:
             key = message['actionid']
@@ -429,10 +434,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'command': command
         }
         df = self.sendDeferred(message)
-        df.addCallback(self.errorUnlessResponse)
+        df.addCallback(self.errorUnlessResponse, expected='Follows')
 
         def onResult(message):
-            return message['output']
+            return message[' ']
 
         return df.addCallback(onResult)
 
