@@ -27,6 +27,7 @@ from twisted.protocols import basic
 from twisted.internet import error as tw_error
 import socket
 import logging
+from distutils.version import LooseVersion
 from hashlib import md5
 from starpy import error
 
@@ -226,10 +227,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if line:
                 if line.endswith(self.END_DATA):
                     # multi-line command results...
-                    message.setdefault(' ', []).extend([
-                        l for l in line.split('\n')
-                                if (l and l != self.END_DATA)
-                    ])
+                    line = line[0:-len(self.END_DATA)]
+                    message['output'] = '\r\n'.join(line.split('\n'))
                 else:
                     # regular line...
                     if line.startswith(self.VERSION_PREFIX):
@@ -244,7 +243,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
                             log.warn("Improperly formatted line received and "
                                      "ignored: %r", line)
                         else:
-                            message[key.lower().strip()] = value.strip()
+                            key = key.lower().strip()
+                            if key in message:
+                                message[key] += '\r\n' + value.strip()
+                            else:
+                                message[key] = value.strip();
         log.debug('Incoming Message: %s', message)
         if 'actionid' in message:
             key = message['actionid']
@@ -434,10 +437,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'command': command
         }
         df = self.sendDeferred(message)
-        df.addCallback(self.errorUnlessResponse, expected='Follows')
+        if LooseVersion(self.amiVersion) > LooseVersion('2.7.0'):
+            df.addCallback(self.errorUnlessResponse)
+        else:
+            df.addCallback(self.errorUnlessResponse, expected='Follows')
 
         def onResult(message):
-            return message[' ']
+            return message['output'].split ('\r\n')
 
         return df.addCallback(onResult)
 
