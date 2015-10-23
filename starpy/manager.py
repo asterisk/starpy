@@ -171,6 +171,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         XXX Should probably use proper Twisted-style credential negotiations
         """
         log.info('Connection Made')
+        self.factory.resetDelay()
         if self.factory.plaintext_login:
             df = self.login()
         else:
@@ -1081,16 +1082,17 @@ class AMIProtocol(basic.LineOnlyReceiver):
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
 
-class AMIFactory(protocol.ClientFactory):
+class AMIFactory(protocol.ReconnectingClientFactory):
     """A factory for AMI protocols
     """
     protocol = AMIProtocol
 
-    def __init__(self, username, secret, id=None, plaintext_login=True):
+    def __init__(self, username, secret, id=None, plaintext_login=True, on_reconnect=None):
         self.username = username
         self.secret = secret
         self.id = id
         self.plaintext_login = plaintext_login
+        self.on_reconnect = on_reconnect
 
     def login(self, ip='localhost', port=5038, timeout=5, bindAddress=None):
         """Connect and return protocol instance
@@ -1109,3 +1111,12 @@ class AMIFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         """Connection failed, report to our callers"""
         self.loginDefer.errback(reason)
+
+    def clientConnectionLost(self, connector, unused_reason):
+        """Connection lost, re-build the login connection"""
+        log.info('connection lost, reconnecting...')
+        self.retry(connector)
+        self.loginDefer = defer.Deferred()
+        log.info(self.on_reconnect)
+        if self.on_reconnect:
+            self.on_reconnect(self.loginDefer)
