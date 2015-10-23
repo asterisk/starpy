@@ -303,10 +303,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
             callbackArgs=(actionid, df,), errbackArgs=(actionid,)
         )
         return df
+
     def checkErrorResponse(self, result, actionid, df):
         """Check for error response and callback"""
         self.cleanup( result, actionid)
-        if result.get('response') == 'Error' and df._errorRespCallback:
+        if isinstance(result, dict) and result.get('response') == 'Error' and df._errorRespCallback:
             df._errorRespCallback(result)
         return result
 
@@ -437,6 +438,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
         df.addCallback(self.errorUnlessResponse, expected='Follows')
 
         def onResult(message):
+            if not isinstance(message, dict):
+                return message
             return message[' ']
 
         return df.addCallback(onResult)
