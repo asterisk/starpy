@@ -36,7 +36,7 @@ class ChannelTracker(propertied.Propertied):
         log.debug("""Reconnecting""")
         self.addCallbacks(deferred)
 
-    def addCallacks(self, deferred=None)
+    def addCallbacks(self, deferred=None)
         """Callbacks setting helper"""
         deferred.addCallback(self.onAMIConnect)
         deferred.addErrback(self.onAMIFailed)
