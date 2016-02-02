@@ -34,7 +34,7 @@ class ChannelTracker( propertied.Propertied ):
 		self.addCallbacks( deferred )
 	def onAMIFailed(self, reason):
 		"""Failed connection handler"""
-		log.error("""Connection failed: """)
+		log.info("""Connection failed. Trying to reconnect...""")
 		log.debug("""Reason: %s""" % reason)
 	def addCallbacks( self, deferred=None ):
 		"""Callbacks setting helper"""
