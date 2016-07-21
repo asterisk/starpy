@@ -945,6 +945,20 @@ class AMIProtocol(basic.LineOnlyReceiver):
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
+    def pjsipEndpoints(self):
+        """List all known pjsip endpoints"""
+        message = {
+            'action': 'pjsipshowendpoints'
+        }
+        return self.collectDeferred(message, 'EndpointListComplete')
+
+    def pjsipShowEndpoints(self, endpoint):
+        message = {
+            'action': 'pjsipshowendpoint',
+            'endpoint': endpoint
+        }
+        return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
+
     def status(self, channel=None):
         """Retrieve status for the given (or all) channels
 
