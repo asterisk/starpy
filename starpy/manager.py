@@ -22,6 +22,7 @@ for basic control of the channels active on a given Asterisk server.
 Module defines a standard Python logging module log 'AMI'
 """
 
+import sys
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 from twisted.internet import error as tw_error
@@ -32,6 +33,14 @@ from starpy import error
 
 
 log = logging.getLogger('AMI')
+
+if sys.version_info[0] < 3:
+    def string_types(value):
+        return isinstance(value, (str, unicode, type(None)))  # noqa
+else:
+    def string_types(value):
+        return isinstance(value, (str, type(None)))
+
 
 class deferredErrorResp(defer.Deferred):
     """A subclass of defer.Deferred that adds a registerError method
@@ -118,7 +127,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """
         log.debug('Registering function %s to handle events of type %r',
                   function, event)
-        if isinstance(event, (str, unicode, type(None))):
+        if string_types(event):
             event = (event,)
         for ev in event:
             self.eventTypeCallbacks.setdefault(ev, []).append(function)
@@ -134,24 +143,24 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """
         log.debug('Deregistering handler %s for events of type %r',
                   function, event)
-        if isinstance(event, (str, unicode, type(None))):
+        if string_types(event):
             event = (event,)
         success = True
         for ev in event:
             try:
                 set = self.eventTypeCallbacks[ev]
-            except KeyError, err:
+            except KeyError as err:
                 success = False
             else:
                 try:
                     while function in set:
                         set.remove(function)
-                except (ValueError, KeyError), err:
+                except (ValueError, KeyError) as err:
                     success = False
                 if not set or function is None:
                     try:
                         del self.eventTypeCallbacks[ev]
-                    except KeyError, err:
+                    except KeyError as err:
                         success = False
         return success
 
@@ -209,7 +218,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             try:
                 callable(tw_error.ConnectionDone(
                          "FastAGI connection terminated"))
-            except Exception, err:
+            except Exception as err:
                 log.error("Failure during connectionLost for callable %s: %s",
                           callable, err)
         self.actionIDCallbacks.clear()
@@ -223,6 +232,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
         message = {}
         while self.messageCache:
             line = self.messageCache.pop(0)
+
+            if type(line) is bytes:
+                line = line.decode('utf-8')
             line = line.strip()
             if line:
                 if line.endswith(self.END_DATA):
@@ -239,7 +251,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
                     else:
                         try:
                             key, value = line.split(':', 1)
-                        except ValueError, err:
+                        except ValueError as err:
                             # XXX data-safety issues, what prevents the
                             # VERSION_PREFIX from showing up in a data-set?
                             log.warn("Improperly formatted line received and "
@@ -253,7 +265,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if callback:
                 try:
                     callback(message)
-                except Exception, err:
+                except Exception as err:
                     # XXX log failure here...
                     pass
         # otherwise is a monitor message or something we didn't send...
@@ -265,13 +277,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
         for key in (event['event'], None):
             try:
                 handlers = self.eventTypeCallbacks[key]
-            except KeyError, err:
+            except KeyError as err:
                 pass
             else:
                 for handler in handlers:
                     try:
                         handler(self, event)
-                    except Exception, err:
+                    except Exception as err:
                         # would like the getException code here...
                         log.error(
                             'Exception in event handler %s on event %s: %s',
@@ -316,7 +328,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         """Cleanup callbacks on completion"""
         try:
             del self.actionIDCallbacks[actionid]
-        except KeyError, err:
+        except KeyError as err:
             pass
         return result
 
@@ -335,7 +347,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
                 self.actionIDCallbacks[actionid] = responseCallback
             log.debug("""MSG OUT: %s""", message)
             for item in message:
-                self.sendLine('%s: %s' % (str(item[0].lower()), str(item[1])))
+                line = ('%s: %s' % (str(item[0].lower()), str(item[1])))
+                self.sendLine(line.encode('utf-8'))
         else:
             message = dict([(k.lower(), v) for (k, v) in message.items()])
             if 'actionid' not in message:
@@ -344,8 +357,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
                 self.actionIDCallbacks[message['actionid']] = responseCallback
             log.debug("""MSG OUT: %s""", message)
             for key, value in message.items():
-                self.sendLine('%s: %s' % (str(key.lower()), str(value)))
-        self.sendLine('')
+                line = ('%s: %s' % (str(key.lower()), str(value)))
+                self.sendLine(line.encode('utf-8'))
+        self.sendLine(''.encode('utf-8'))
         if type(message) == list:
             return actionid
         else:
@@ -630,7 +644,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         def removeActionId(message):
             try:
                 del message['actionid']
-            except KeyError, err:
+            except KeyError as err:
                 pass
             return message
 
