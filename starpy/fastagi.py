@@ -941,7 +941,7 @@ class InSequence(object):
     def __init__(self):
         self.actions = []
         self.results = []
-        self.finalDF = None
+        self.finalDF = defer.Deferred()
 
     def append(self, function, *args, **named):
         """Append an action to the set of actions to process"""
@@ -953,9 +953,8 @@ class InSequence(object):
 
     def _doSequence(self):
         """Return a deferred that does each action in sequence"""
-        finalDF = defer.Deferred()
-        self.onActionSuccess(None, finalDF=finalDF)
-        return finalDF
+        self.onActionSuccess(None, finalDF=self.finalDF)
+        return self.finalDF
 
     def recordResult(self, result):
         """Record the result for later"""
