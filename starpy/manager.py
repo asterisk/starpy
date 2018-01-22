@@ -245,7 +245,11 @@ class AMIProtocol(basic.LineOnlyReceiver):
                             log.warn("Improperly formatted line received and "
                                      "ignored: %r", line)
                         else:
-                            message[key.lower().strip()] = value.strip()
+                            key = key.lower().strip()
+                            if key in message:
+                                message[key] = message[key] + "\r\n" + value.strip()
+                            else:
+                                message[key] = value.strip()
         log.debug('Incoming Message: %s', message)
         if 'actionid' in message:
             key = message['actionid']
@@ -698,7 +702,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
             data=None, variable={}, async=False, channelid=None,
-			otherchannelid=None
+            otherchannelid=None
         ):
         """Originate call to connect channel to given context/exten/priority
 
