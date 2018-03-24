@@ -1,6 +1,6 @@
 #
 # StarPy -- Asterisk Protocols for Twisted
-# 
+#
 # Copyright (c) 2006, Michael C. Fletcher
 #
 # Michael C. Fletcher <mcfletch@vrplumber.com>
@@ -29,34 +29,38 @@ XXX allow for starting the menu system anywhere in the hierarchy
 XXX add the reject/accept menus to the CollectDigits (requires soundfiles
 in standard locations on the server, complicates install)
 """
-from twisted.application import service, internet
-from twisted.internet import reactor, defer
-from starpy import manager, fastagi, error
-import utilapplication
-import os, logging, pprint, time
+from twisted.internet import defer
+from starpy import error
+import os
+import sys
+import logging
 from basicproperty import common, propertied, basic
 
 log = logging.getLogger('menu')
 log.setLevel(logging.DEBUG)
+
 
 class Interaction(propertied.Propertied):
     """Base class for user-interaction operations"""
     ALL_DIGITS = '0123456789*#'
     timeout = common.FloatProperty(
         "timeout", """Duration to wait for response before repeating message""",
-        defaultValue = 5,
+        defaultValue=5,
     )
     maxRepetitions = common.IntegerProperty(
         "maxRepetitions", """Maximum number of times to play before failure""",
-        defaultValue = 5,
+        defaultValue=5,
     )
     onSuccess = basic.BasicProperty(
-        "onSuccess", """Optional callback for success with signature method( result, runner )""",
+        "onSuccess",
+        """Optional callback for success with signature method( result, runner )""",
     )
     onFailure = basic.BasicProperty(
-        "onFailure", """Optional callback for failure with signature method( result, runner )""",
+        "onFailure",
+        """Optional callback for failure with signature method( result, runner )""",
     )
     runnerClass = None
+
     def __call__(self, agi, *args, **named):
         """Initiate AGI-based interaction with the user"""
         return self.runnerClass(model=self, agi=agi)(*args, **named)
@@ -67,6 +71,7 @@ class Runner(propertied.Propertied):
     agi = basic.BasicProperty(
         "agi", """The AGI instance we use to communicate with the user""",
     )
+
     def defaultFinalDF(prop, client):
         """Produce the default finalDF with onSuccess/onFailure support"""
         df = defer.Deferred()
@@ -80,13 +85,13 @@ class Runner(propertied.Propertied):
         return df
     finalDF = basic.BasicProperty(
         "finalDF", """Final deferred we will callback/errback on success/failure""",
-        defaultFunction = defaultFinalDF,
+        defaultFunction=defaultFinalDF,
     )
     del defaultFinalDF
 
     alreadyRepeated = common.IntegerProperty(
         "alreadyRepeated", """Number of times we've repeated the message...""",
-        defaultValue = 0,
+        defaultValue=0,
     )
     model = basic.BasicProperty(
         "model", """The data-model that we are presenting to the user (e.g. Menu)""",
@@ -94,7 +99,7 @@ class Runner(propertied.Propertied):
 
     def returnResult(self, result):
         """Return result of deferred to our original caller"""
-        log.debug('returnResult: %s %s', self.model,result)
+        log.debug('returnResult: %s %s', self.model, result)
         if not self.finalDF.called:
             self.finalDF.debug = True
             self.finalDF.callback(result)
@@ -117,20 +122,23 @@ class Runner(propertied.Propertied):
         """Take set of prompt-compatible objects and produce a PromptRunner for them"""
         realPrompt = []
         for p in prompt:
-            if isinstance(p, (str, unicode)):
+            if isinstance(p, str):
+                p = AudioPrompt(p)
+            elif sys.version_info <= (3, 0) and isinstance(p, unicode):  # noqa
                 p = AudioPrompt(p)
             elif isinstance(p, int):
                 p = NumberPrompt(p)
             elif not isinstance(p, Prompt):
-                raise TypeError( """Unknown prompt element type on %r: %s"""%(
-                    p, p.__class__,
-                ))
+                raise TypeError(
+                    """Unknown prompt element type on %r: %s""" % (
+                        p, p.__class__, )
+                )
             realPrompt.append(p)
         return PromptRunner(
-            elements = realPrompt,
-            escapeDigits = self.escapeDigits,
-            agi = self.agi,
-            timeout = self.model.timeout,
+            elements=realPrompt,
+            escapeDigits=self.escapeDigits,
+            agi=self.agi,
+            timeout=self.model.timeout,
         )
 
 
@@ -151,7 +159,7 @@ class CollectDigitsRunner(Runner):
             # easiest possibility, just read out the file...
             return self.agi.getData(
                 soundFile, timeout=self.model.timeout,
-                maxDigits = getattr(self.model, 'maxDigits', None),
+                maxDigits=getattr(self.model, 'maxDigits', None),
             ).addCallback(self.onReadDigits).addErrback(self.returnError)
         else:
             raise NotImplemented("""Haven't got non-soundfile menus working yet""")
@@ -166,8 +174,9 @@ class CollectDigitsRunner(Runner):
                 return False, 'Too few digits'
         return True, None
 
-    def onReadDigits(self, (digits,timeout)):
+    def onReadDigits(self, values):
         """Deal with succesful result from reading digits"""
+        (digits, timeout) = values
         log.info("""onReadDigits: %r, %s""", digits, timeout)
         valid, reason = self.validEntry(digits)
         if (not digits) and (not timeout):
@@ -183,7 +192,8 @@ class CollectDigitsRunner(Runner):
                 pass
             self.alreadyRepeated += 1
             if self.alreadyRepeated >= self.model.maxRepetitions:
-                log.warn("""User did not complete digit-entry for %s, timing out""", self.model)
+                log.warn("""User did not complete digit-entry for %s, timing out""",
+                         self.model)
                 raise error.MenuTimeout(
                     self.model,
                     """User did not finish digit-entry in %s passes of collection""" % (
@@ -201,6 +211,7 @@ class CollectPasswordRunner(CollectDigitsRunner):
     expected = common.StringLocaleProperty(
         "expected", """The value expected/required from the user for this run""",
     )
+
     def __call__(self, expected, *args, **named):
         """Begin the AGI processing for the menu"""
         self.expected = expected
@@ -223,9 +234,10 @@ class CollectAudioRunner(Runner):
     """Audio-collection runner, records user audio to a file on the asterisk server"""
     escapeDigits = common.StringLocaleProperty(
         "escapeDigits", """Set of digits which escape from recording""",
-        defaultFunction = lambda prop, client: client.model.escapeDigits,
-        setDefaultOnGet = False,
+        defaultFunction=lambda prop, client: client.model.escapeDigits,
+        setDefaultOnGet=False,
     )
+
     def __call__(self, *args, **named):
         """Begin the AGI processing for the menu"""
         self.readPrompt()
@@ -252,7 +264,7 @@ class CollectAudioRunner(Runner):
         else:
             return self.collectAudio()
 
-    def collectAudio( self ):
+    def collectAudio(self):
         """We're supposed to record audio from the user with our model's parameters"""
         # XXX use a temporary file for recording the audio, then move to final destination
         log.debug('collectAudio')
@@ -280,8 +292,8 @@ class CollectAudioRunner(Runner):
         digits, typeOfExit, endpos = result
         if typeOfExit in ('hangup', 'timeout'):
             # expected common-case for recording...
-            return self.returnResult((self,(digits,typeOfExit,endpos)))
-        elif typeOfExit =='dtmf':
+            return self.returnResult((self, (digits, typeOfExit, endpos)))
+        elif typeOfExit == 'dtmf':
             raise error.MenuExit(
                 self.model,
                 """User cancelled entry of audio""",
@@ -297,7 +309,7 @@ class CollectAudioRunner(Runner):
             """Failure collecting audio for CollectAudio instance %s: %s""",
             self.model, reason.getTraceback(),
         )
-        return reason # re-raise the error...
+        return reason  # re-raise the error...
 
     def moveToFinal(self, result):
         """On succesful recording, move temporaryFile to final file"""
@@ -305,13 +317,12 @@ class CollectAudioRunner(Runner):
             'Moving recorded audio %r to final destination %r',
             self.model.temporaryFile, self.model.filename
         )
-        import os
         try:
             os.rename(
                 '%s.%s' % (self.model.temporaryFile, self.model.format),
                 '%s.%s' % (self.model.filename, self.model.format),
             )
-        except (OSError, IOError), err:
+        except (OSError, IOError) as err:
             log.error(
                 """Unable to move temporary recording file %r to target file %r: %s""",
                 self.model.temporaryFile, self.model.filename,
@@ -324,6 +335,7 @@ class CollectAudioRunner(Runner):
 
 class MenuRunner(Runner):
     """User's single interaction with a given menu"""
+
     def defaultEscapeDigits(prop, client):
         """Return the default escape digits for the given client"""
         if client.model.tellInvalid:
@@ -333,9 +345,9 @@ class MenuRunner(Runner):
         return escapeDigits
     escapeDigits = common.StringLocaleProperty(
         "escapeDigits", """Set of digits which escape from prompts to choose option""",
-        defaultFunction = defaultEscapeDigits,
+        defaultFunction=defaultEscapeDigits,
     )
-    del defaultEscapeDigits # clean up namespace
+    del defaultEscapeDigits  # clean up namespace
 
     def __call__(self, *args, **named):
         """Begin the AGI processing for the menu"""
@@ -353,7 +365,8 @@ class MenuRunner(Runner):
         if not pressed:
             self.alreadyRepeated += 1
             if self.alreadyRepeated >= self.model.maxRepetitions:
-                log.warn("""User did not complete menu selection for %s, timing out""", self.model)
+                log.warn("""User did not complete menu selection for %s, timing out""",
+                         self.model)
                 if not self.finalDF.called:
                     raise error.MenuTimeout(
                         self.model,
@@ -374,15 +387,16 @@ class MenuRunner(Runner):
                             self.returnResult, self.returnError
                         )
                     elif hasattr(option, 'onSuccess'):
-                        return defer.maybeDeferred(option.onSuccess, pressed, self).addCallbacks(
-                            self.returnResult, self.returnError
-                        )
+                        return defer.maybeDeferred(option.onSuccess, pressed, self) \
+                            .addCallbacks(self.returnResult, self.returnError)
                     else:
-                        return self.returnResult([(option,pressed),])
+                        return self.returnResult([(option, pressed), ])
             # but it wasn't anything we expected...
             if not self.model.tellInvalid:
                 raise error.MenuUnexpectedOption(
-                    self.model, """User somehow selected %r, which isn't a recognised option?""" % (pressed,),
+                    self.model,
+                    "User somehow selected %r, which isn't a recognised option?" % (
+                        pressed,),
                 )
             else:
                 return self.agi.getOption(
@@ -424,8 +438,9 @@ class Menu(Interaction):
         "options", """Set of options the user may select""",
     )
     tellInvalid = common.IntegerProperty(
-        "tellInvalid", """Whether to tell the user that their selection is unrecognised""",
-        defaultValue = True,
+        "tellInvalid",
+        """Whether to tell the user that their selection is unrecognised""",
+        defaultValue=True,
     )
     runnerClass = MenuRunner
 
@@ -442,11 +457,12 @@ class SubMenu(Option):
     menu = basic.BasicProperty(
         "menu", """The sub-menu we are presenting to the user""",
     )
+
     def __call__(self, pressed, parent):
         """Get result from the sub-menu, add ourselves into the result"""
         def onResult(result):
             log.debug("""Child menu %s result: %s""", self.menu, result)
-            result.insert(0, (self,pressed))
+            result.insert(0, (self, pressed))
             return result
 
         def onFailure(reason):
@@ -460,6 +476,7 @@ class SubMenu(Option):
 
 class ExitOn(Option):
     """An option which exits from the current menu level"""
+
     def __call__(self, pressed, parent):
         """Raise a MenuExit error"""
         raise error.MenuExit(
@@ -477,18 +494,21 @@ class CollectDigits(Interaction):
     )
     readBack = common.BooleanProperty(
         "readBack", """Whether to read the entered value back to the user""",
-        defaultValue = False,
+        defaultValue=False,
     )
     minDigits = common.IntegerProperty(
-        "minDigits", """Minimum number of digits to collect (only restricted if specified)""",
+        "minDigits",
+        """Minimum number of digits to collect (only restricted if specified)""",
     )
     maxDigits = common.IntegerProperty(
-        "maxDigits", """Maximum number of digits to collect (only restricted if specified)""",
+        "maxDigits",
+        """Maximum number of digits to collect (only restricted if specified)""",
     )
     runnerClass = CollectDigitsRunner
     tellInvalid = common.IntegerProperty(
-        "tellInvalid", """Whether to tell the user that their selection is unrecognised""",
-        defaultValue = True,
+        "tellInvalid",
+        """Whether to tell the user that their selection is unrecognised""",
+        defaultValue=True,
     )
 
 
@@ -497,11 +517,11 @@ class CollectPassword(CollectDigits):
     runnerClass = CollectPasswordRunner
     escapeDigits = common.StringLocaleProperty(
         "escapeDigits", """Set of digits which escape from password entry""",
-        defaultValue = '',
+        defaultValue='',
     )
     soundFile = common.StringLocaleProperty(
         "soundFile", """File (name) for the pre-recorded blurb""",
-        defaultValue = 'vm-password',
+        defaultValue='vm-password',
     )
 
 
@@ -517,30 +537,31 @@ class CollectAudio(Interaction):
         "textPrompt", """Textual prompt describing the option""",
     )
     temporaryFile = common.StringLocaleProperty(
-        "temporaryFile", """Temporary file into which to record the audio before moving to filename""",
+        "temporaryFile",
+        """Temporary file into which to record the audio before moving to filename""",
     )
     filename = common.StringLocaleProperty(
         "filename", """Final filename into which to record the file...""",
     )
     deleteOnFail = common.BooleanProperty(
         "deleteOnFail", """Whether to delete failed attempts to record a file""",
-        defaultValue = True
+        defaultValue=True
     )
     escapeDigits = common.StringLocaleProperty(
         "escapeDigits", """Set of digits which escape from recording the file""",
-        defaultValue = '#*0123456789',
+        defaultValue='#*0123456789',
     )
     timeout = common.FloatProperty(
         "timeout", """Duration to wait for recording (maximum record time)""",
-        defaultValue = 60,
+        defaultValue=60,
     )
     silence = common.FloatProperty(
         "silence", """Duration to wait for recording (maximum record time)""",
-        defaultValue = 5,
+        defaultValue=5,
     )
     beep = common.BooleanProperty(
         "beep", """Whether to play a "beep" sound at beginning of recording""",
-        defaultValue = True,
+        defaultValue=True,
     )
     runnerClass = CollectAudioRunner
 
@@ -560,6 +581,7 @@ class PromptRunner(propertied.Propertied):
     timeout = common.FloatProperty(
         "timeout", """Timeout on data-entry after completed reading""",
     )
+
     def __call__(self):
         """Return a deferred that chains all of the sub-prompts in order
 
@@ -575,7 +597,7 @@ class PromptRunner(propertied.Propertied):
             return result
         try:
             element = self.elements[index]
-        except IndexError, err:
+        except IndexError as err:
             # okay, do a waitForDigit from timeout seconds...
             return self.agi.waitForDigit(self.timeout).addCallback(
                 self.processKey
@@ -592,7 +614,7 @@ class PromptRunner(propertied.Propertied):
             # getOption result...
             if result[1] == 0:
                 # failure during load of the file...
-                log.warn("""Apparent failure during load of audio file: %s""", self.value)
+                log.warn("Apparent failure during load of audio file: %s", self.value)
                 result = 0
             else:
                 result = result[0]
@@ -601,7 +623,7 @@ class PromptRunner(propertied.Propertied):
                     result = ord(result)
                 else:
                     result = 0
-        if result: # None or 0
+        if result:  # None or 0
             # User pressed a key during the reading...
             key = chr(result)
             if key in self.escapeDigits:
@@ -613,7 +635,7 @@ class PromptRunner(propertied.Propertied):
             # completed reading without any escape digits, continue reading
         return None
 
-    def processLast(self,result):
+    def processLast(self, result):
         if result is None:
             result = ''
         return result
@@ -624,6 +646,7 @@ class Prompt(propertied.Propertied):
     value = basic.BasicProperty(
         "value", """Filename to be read to the user""",
     )
+
     def __init__(self, value, **named):
         named['value'] = value
         super(Prompt, self).__init__(**named)
@@ -648,6 +671,7 @@ class NumberPrompt(Prompt):
     value = common.IntegerProperty(
         "value", """Integer numeral to read""",
     )
+
     def read(self, agi, escapeDigits):
         """Read the audio prompt to the user"""
         return agi.sayNumber(self.value, escapeDigits)
@@ -671,8 +695,9 @@ class DateTimePrompt(Prompt):
     """Prompt that reads a date/time as a date"""
     format = basic.BasicProperty(
         "format", """Format in which to read the date to the user""",
-        defaultValue = None
+        defaultValue=None
     )
+
     def read(self, agi, escapeDigits):
         """Read the audio prompt to the user"""
         return agi.sayDateTime(self.value, escapeDigits, format=self.format)

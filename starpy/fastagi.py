@@ -28,7 +28,6 @@ Module defines a standard Python logging module log 'FastAGI'
 from twisted.internet import protocol, reactor, defer
 from twisted.internet import error as tw_error
 from twisted.protocols import basic
-import socket
 import logging
 import time
 from starpy import error
@@ -236,9 +235,10 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
                 if endpos == skipMS:
                     # "likely" an error according to the wiki,
                     # we'll raise an error...
-                    raise error.AGICommandFailure(FAILURE_CODE,
-                                "End position %s == original position, "
-                                "result code %s" % (endpos, digit))
+                    raise error.AGICommandFailure(
+                        FAILURE_CODE,
+                        "End position %s == original position, "
+                        "result code %s" % (endpos, digit))
                 return digit, endpos
         raise ValueError("Unexpected result on streaming completion: %r" %
                          resultLine)
@@ -267,8 +267,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         sequence = InSequence()
         sequence.append(self.setContext, self.variables['agi_context'])
         sequence.append(self.setExtension, self.variables['agi_extension'])
-        sequence.append(self.setPriority, int(self.variables['agi_priority'])
-                                              + difference)
+        sequence.append(self.setPriority,
+                        int(self.variables['agi_priority']) + difference)
         sequence.append(self.finish)
         return sequence()
 
@@ -326,7 +326,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """
         parts = resultLine.split(' ', 1)
         result = int(parts[0])
-        endpos = None # Default if endpos isn't specified
+        endpos = None  # Default if endpos isn't specified
         if len(parts) == 2:
             endposStuff = parts[1].strip()
             if endposStuff.startswith('endpos='):
@@ -379,7 +379,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """
         command = 'DATABASE DELTREE "%s"' % (family,)
         if keyTree:
-            command += ' "%s"' % (keytree,)
+            command += ' "%s"' % (keyTree,)
         return self.sendCommand(command).addCallback(
             self.checkFailure, failure='0',
         ).addCallback(self.resultAsInt)
@@ -629,8 +629,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 
     def recordFile(
             self, filename, format, escapeDigits, timeout=-1,
-            offsetSamples=None, beep=True, silence=None,
-        ):
+            offsetSamples=None, beep=True, silence=None,):
         """Record channel to given filename until escapeDigits or silence
 
         filename -- filename on the server to which to save

@@ -46,11 +46,13 @@ class deferredErrorResp(defer.Deferred):
     """A subclass of defer.Deferred that adds a registerError method
     to handle function callback when an Error response happens"""
     _errorRespCallback = None
-    def registerError(self, function ):
+
+    def registerError(self, function):
         """Add function for Error response callback"""
         self._errorRespCallback = function
         log.debug('Registering function %s to handle Error response'
                   % (function))
+
 
 class AMIProtocol(basic.LineOnlyReceiver):
     """Protocol for the interfacing with the Asterisk Manager Interface (AMI)
@@ -239,10 +241,10 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if line:
                 if line.endswith(self.END_DATA):
                     # multi-line command results...
-                    message.setdefault(' ', []).extend([
-                        l for l in line.split('\n')
-                                if (l and l != self.END_DATA)
-                    ])
+                    message.setdefault(' ', []).extend(
+                        [l for l in line.split('\n')
+                            if (l and l != self.END_DATA)]
+                    )
                 else:
                     # regular line...
                     if line.startswith(self.VERSION_PREFIX):
@@ -319,8 +321,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def checkErrorResponse(self, result, actionid, df):
         """Check for error response and callback"""
-        self.cleanup( result, actionid)
-        if isinstance(result, dict) and result.get('response') == 'Error' and df._errorRespCallback:
+        self.cleanup(result, actionid)
+        if isinstance(result, dict) and result.get('response') == 'Error' \
+                and df._errorRespCallback:
             df._errorRespCallback(result)
         return result
 
@@ -398,7 +401,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             raise error.AMICommandFailure(message)
         return message
 
-    ## End-user API
+    # End-user API
     def absoluteTimeout(self, channel, timeout):
         """Set timeout value for the given channel (in seconds)"""
         message = {
@@ -461,10 +464,9 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def action(self, action, **action_args):
         """Sends an arbitrary action to the AMI"""
-        #action_args will be ar least an empty dict so we build the message from it.
+        # action_args will be at least an empty dict so we build the message from it.
         action_args['action'] = action
         return self.sendDeferred(action_args).addCallback(self.errorUnlessResponse)
-
 
     def dbDel(self, family, key):
         """Delete key value in the AstDB database"""
@@ -493,7 +495,8 @@ class AMIProtocol(basic.LineOnlyReceiver):
             value = event['val']
             self.deregisterEvent("DBGetResponse", extractValue)
             return df.callback(value)
-        def errorResponse( message ):
+
+        def errorResponse(message):
             self.deregisterEvent("DBGetResponse", extractValue)
             return df.callback(None)
         message = {
@@ -612,14 +615,16 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def loginChallengeResponse(self):
         """Log into the AMI interface with challenge-response.
 
-        Follows the same approach as self.login() using factory.username and factory.secret.
-        Also done automatically on connection: will be called instead of self.login() if
-        factory.plaintext_login is False: see AMIFactory constructor.
+        Follows the same approach as self.login() using factory.username and
+        factory.secret.  Also done automatically on connection: will be called
+        instead of self.login() if factory.plaintext_login is False: see
+        AMIFactory constructor.
         """
         def sendResponse(challenge):
-            if not type(challenge) is dict or not 'challenge' in challenge:
+            if not type(challenge) is dict or 'challenge' not in challenge:
                 raise error.AMICommandFailure(challenge)
-            key_value = md5('%s%s' % (challenge['challenge'], self.factory.secret)).hexdigest()
+            key_value = md5('%s%s' % (challenge['challenge'], self.factory.secret)) \
+                .hexdigest()
             return self.sendDeferred({
                 'action': 'Login',
                 'authtype': 'MD5',
@@ -712,8 +717,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
             data=None, variable={}, async=False, channelid=None,
-			otherchannelid=None
-        ):
+            otherchannelid=None):
         """Originate call to connect channel to given context/exten/priority
 
         channel -- the outgoing channel to which will be dialed
@@ -886,7 +890,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         message = {
             'action': 'queues'
         }
-        #return self.collectDeferred(message, 'QueueStatusEnd')
+        # return self.collectDeferred(message, 'QueueStatusEnd')
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
     def queueStatus(self, queue=None, member=None):
@@ -1101,7 +1105,8 @@ class AMIFactory(protocol.ReconnectingClientFactory):
     """
     protocol = AMIProtocol
 
-    def __init__(self, username, secret, id=None, plaintext_login=True, on_reconnect=None):
+    def __init__(self, username, secret, id=None, plaintext_login=True,
+                 on_reconnect=None):
         self.username = username
         self.secret = secret
         self.id = id
