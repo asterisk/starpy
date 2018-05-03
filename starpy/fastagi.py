@@ -127,7 +127,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
                 try:
                     key, value = line.split(':', 1)
                     value = value[1:].rstrip('\n').rstrip('\r')
-                except ValueError, err:
+                except ValueError as err:
                     log.error("""Invalid variable line: %r""", line)
                 else:
                     self.variables[key.lower()] = value
@@ -135,7 +135,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         else:
             try:
                 df = self.pendingMessages.pop(0)
-            except IndexError, err:
+            except IndexError as err:
                 log.warn("Line received without pending deferred: %r", line)
             else:
                 if line.startswith('200'):
@@ -148,7 +148,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
                     try:
                         errCode, line = line.split(' ', 1)
                         errCode = int(errCode)
-                    except ValueError, err:
+                    except ValueError as err:
                         errCode = 500
                     df.errback(error.AGICommandFailure(errCode, line))
 
@@ -166,7 +166,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         # result code may have trailing information...
         try:
             resultInt, line = result.split(' ', 1)
-        except ValueError, err:
+        except ValueError as err:
             resultInt = result
         if resultInt.strip() == failure:
             raise error.AGICommandFailure(FAILURE_CODE, result)
@@ -176,7 +176,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """(Internal) Convert result to an integer value"""
         try:
             return int(result.strip())
-        except ValueError, err:
+        except ValueError as err:
             raise error.AGICommandFailure(FAILURE_CODE, result)
 
     def secondResultItem(self, result):
@@ -188,7 +188,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         try:
             digits, timeout = resultLine.split(' ', 1)
             return digits.strip(), True
-        except ValueError, err:
+        except ValueError as err:
             return resultLine.strip(), False
 
     def dateAsSeconds(self, date):
@@ -207,7 +207,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """
         try:
             digit, exitType, endposStuff = resultLine.split(' ', 2)
-        except ValueError, err:
+        except ValueError as err:
             pass
         else:
             digit = int(digit)
@@ -226,7 +226,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """
         try:
             digit, endposStuff = resultLine.split(' ', 1)
-        except ValueError, err:
+        except ValueError as err:
             pass
         else:
             digit = int(digit)
@@ -472,7 +472,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             timeout *= 1000
             command += ' %s' % (timeout,)
 
-        def charFirst((c, position)):
+        def charFirst(values):
+            (c, position) = values
             if not c:  # returns 0 on timeout
                 c = ''
             else:
