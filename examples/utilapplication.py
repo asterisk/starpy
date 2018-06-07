@@ -173,9 +173,9 @@ class AMISpecifier( propertied.Propertied ):
         "timeout", """Timeout in seconds for an AMI connection timeout""",
         defaultValue = 5.0,
     )
-    def login( self ):
+    def login( self, on_reconnect=None ):
         """Login to the specified manager via the AMI"""
-        theManager = manager.AMIFactory(self.username, self.secret)
+        theManager = manager.AMIFactory(self.username, self.secret, on_reconnect=on_reconnect)
         return theManager.login(self.server, self.port, timeout=self.timeout)
 
 class AGISpecifier( propertied.Propertied ):

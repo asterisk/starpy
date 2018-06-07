@@ -1125,12 +1125,16 @@ class AMIFactory(protocol.ReconnectingClientFactory):
     def clientConnectionFailed(self, connector, reason):
         """Connection failed, report to our callers"""
         self.loginDefer.errback(reason)
+        self.reconnect(connector)
 
     def clientConnectionLost(self, connector, unused_reason):
         """Connection lost, re-build the login connection"""
         log.info('connection lost, reconnecting...')
+        log.debug(self.on_reconnect)
+        self.reconnect(connector)
+
+    def reconnect(self, connector):
         self.retry(connector)
         self.loginDefer = defer.Deferred()
-        log.info(self.on_reconnect)
         if self.on_reconnect:
             self.on_reconnect(self.loginDefer)

@@ -21,12 +21,25 @@ class ChannelTracker( propertied.Propertied ):
 	)
 	def main( self ):
 		"""Main operation for the channel-tracking demo"""
-		amiDF = APPLICATION.amiSpecifier.login( 
-		).addCallback( self.onAMIConnect )
+		deferred = APPLICATION.amiSpecifier.login( on_reconnect=self.onAMIReconnect )
+		self.addCallbacks( deferred )
 	def onAMIConnect( self, ami ):
+		"""Connection handler"""
 		ami.status().addCallback( self.onStatus, ami=ami )
 		ami.registerEvent( 'Hangup', self.onChannelHangup )
 		ami.registerEvent( 'Newchannel', self.onChannelNew )
+	def onAMIReconnect( self, deferred=None ):
+		"""Callback for AMIFactory's reconnect event"""
+		log.debug("""Reconnecting""")
+		self.addCallbacks( deferred )
+	def onAMIFailed(self, reason):
+		"""Failed connection handler"""
+		log.info("""Connection failed. Trying to reconnect...""")
+		log.debug("""Reason: %s""", reason)
+	def addCallbacks( self, deferred=None ):
+		"""Callbacks setting helper"""
+		deferred.addCallback( self.onAMIConnect )
+		deferred.addErrback( self.onAMIFailed )
 	def onStatus( self, events, ami=None ):
 		"""Integrate the current status into our set of channels"""
 		log.debug( """Initial channel status retrieved""" )
@@ -35,10 +48,11 @@ class ChannelTracker( propertied.Propertied ):
 	def onChannelNew( self, ami, event ):
 		"""Handle creation of a new channel"""
 		log.debug( """Start on channel %s""", event )
-		opening = not self.channels.has_key( event['uniqueid'] )
-		self.channels[ event['uniqueid'] ] = event 
-		if opening:
-			self.onChannelChange( ami, event, opening = opening )
+		if 'uniqueid' in event:
+			opening = not event['uniqueid'] in self.channels
+			self.channels[ event['uniqueid'] ] = event
+			if opening:
+				self.onChannelChange( ami, event, opening = opening )
 	def onChannelHangup( self, ami, event ):
 		"""Handle hangup of an existing channel"""
 		try:
