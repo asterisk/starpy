@@ -3,3 +3,4 @@ dist
 starpy.egg-info
 .tox
 *.pyc
+.idea
