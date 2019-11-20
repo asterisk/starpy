@@ -216,7 +216,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def connectionLost(self, reason):
         """Connection lost, clean up callbacks"""
-        for key, callable in self.actionIDCallbacks.items():
+        for key, callable in list(self.actionIDCallbacks.items()):
             try:
                 callable(tw_error.ConnectionDone(
                          "FastAGI connection terminated"))
@@ -359,7 +359,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             if responseCallback:
                 self.actionIDCallbacks[message['actionid']] = responseCallback
             log.debug("""MSG OUT: %s""", message)
-            for key, value in message.items():
+            for key, value in list(message.items()):
                 line = ('%s: %s' % (str(key.lower()), str(value)))
                 self.sendLine(line.encode('utf-8'))
         self.sendLine(''.encode('utf-8'))
@@ -716,7 +716,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def originate(
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
-            data=None, variable={}, async=False, channelid=None,
+            data=None, variable={}, is_async=False, channelid=None,
             otherchannelid=None):
         """Originate call to connect channel to given context/exten/priority
 
@@ -730,7 +730,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         application -- alternate application to Dial to use for outbound dial
         data -- data to pass to application
         variable -- variables associated to the call
-        async -- make the origination asynchronous
+        is_async -- make the origination asynchronous
         """
         message = [(k, v) for (k, v) in (
             ('action', 'originate'),
@@ -742,13 +742,13 @@ class AMIProtocol(basic.LineOnlyReceiver):
             ('account', account),
             ('application', application),
             ('data', data),
-            ('async', str(async)),
+            ('async', str(is_async)),
             ('channelid', channelid),
             ('otherchannelid', otherchannelid),
         ) if v is not None]
         if timeout is not None:
             message.append(('timeout', timeout*1000))
-        for var_name, var_value in variable.items():
+        for var_name, var_value in list(variable.items()):
             message.append(('variable', '%s=%s' % (var_name, var_value)))
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
@@ -1017,7 +1017,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'dstfilename': dstfile,
             'reload': reload
         }
-        for k, v in headers.items():
+        for k, v in list(headers.items()):
             message[k] = v
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
@@ -1027,7 +1027,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             'Action': 'UserEvent',
             'userevent': event
         }
-        for i, j in headers.items():
+        for i, j in list(headers.items()):
             message[i] = j
         return self.sendMessage(message)
 

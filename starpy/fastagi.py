@@ -81,7 +81,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
     """
     readingVariables = False
     lostConnectionDeferred = None
-    delimiter = '\n'
+    delimiter = b'\n'
 
     def __init__(self, *args, **named):
         """Initialise the AMIProtocol, arguments are ignored"""
@@ -124,8 +124,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
                 self.factory.mainFunction(self)
             else:
                 try:
-                    key, value = line.split(':', 1)
-                    value = value[1:].rstrip('\n').rstrip('\r')
+                    key, value = line.split(b':', 1)
+                    value = value[1:].rstrip(b'\n').rstrip(b'\r')
                 except ValueError as err:
                     log.error("""Invalid variable line: %r""", line)
                 else:
@@ -137,15 +137,15 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
             except IndexError as err:
                 log.warn("Line received without pending deferred: %r", line)
             else:
-                if line.startswith('200'):
+                if line.startswith(b'200'):
                     line = line[4:]
-                    if line.lower().startswith('result='):
+                    if line.lower().startswith(b'result='):
                         line = line[7:]
                     df.callback(line)
                 else:
                     # XXX parse out the error code
                     try:
-                        errCode, line = line.split(' ', 1)
+                        errCode, line = line.split(b' ', 1)
                         errCode = int(errCode)
                     except ValueError as err:
                         errCode = 500
@@ -155,6 +155,8 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         """(Internal) Send the given command to the other side"""
         log.info("Send Command: %r", commandString)
         commandString = commandString.rstrip('\n').rstrip('\r')
+        if type(commandString) == str:
+            commandString = commandString.encode('utf-8')
         df = defer.Deferred()
         self.pendingMessages.append(df)
         self.sendLine(commandString)
