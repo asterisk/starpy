@@ -717,7 +717,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
             data=None, variable={}, async=False, channelid=None,
-            otherchannelid=None):
+            otherchannelid=None, codecs=None):
         """Originate call to connect channel to given context/exten/priority
 
         channel -- the outgoing channel to which will be dialed
@@ -745,6 +745,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             ('async', str(async)),
             ('channelid', channelid),
             ('otherchannelid', otherchannelid),
+            ('codecs', codecs),
         ) if v is not None]
         if timeout is not None:
             message.append(('timeout', timeout*1000))
