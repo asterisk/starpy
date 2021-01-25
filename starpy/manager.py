@@ -713,10 +713,28 @@ class AMIProtocol(basic.LineOnlyReceiver):
         }
         return self.sendDeferred(message).addCallback(self.errorUnlessResponse)
 
+    def deprecated_async(func):
+        """A decorator, that let's us keep our old API, but deprecate it"""
+
+        from functools import wraps
+        @wraps(func)
+        def inner(*args, **kwargs):
+            if 'async' in kwargs:
+                if 'asynchronous' in kwargs:
+                    raise ValueError('cannot use both async and asynchronous '
+                                     'keyword arguments! the latter obsoletes the first.')
+                warnings.warn('async keyword argumnt is deprecated, '
+                              'use asynchronous instead', DeprecationWarning)
+                kwargs['asynchronous'] = kwargs.pop('async')
+            return func(*args, **kwargs)
+
+        return inner
+
+    @deprecated_async
     def originate(
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
-            data=None, variable={}, async=False, channelid=None,
+            data=None, variable={}, asynchronous=False, channelid=None,
             otherchannelid=None, codecs=None):
         """Originate call to connect channel to given context/exten/priority
 
@@ -730,7 +748,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         application -- alternate application to Dial to use for outbound dial
         data -- data to pass to application
         variable -- variables associated to the call
-        async -- make the origination asynchronous
+        asynchronous -- make the origination asynchronous
         """
         message = [(k, v) for (k, v) in (
             ('action', 'originate'),
@@ -742,7 +760,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             ('account', account),
             ('application', application),
             ('data', data),
-            ('async', str(async)),
+            ('async', str(asynchronous)),
             ('channelid', channelid),
             ('otherchannelid', otherchannelid),
             ('codecs', codecs),
