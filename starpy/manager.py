@@ -168,6 +168,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
 
     def lineReceived(self, line):
         """Handle Twisted's report of an incoming line from the manager"""
+        line = line.decode("utf-8")
         log.debug('Line In: %r', line)
         self.messageCache.append(line)
         if not line.strip():
@@ -716,7 +717,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
     def originate(
             self, channel, context=None, exten=None, priority=None,
             timeout=None, callerid=None, account=None, application=None,
-            data=None, variable={}, async=False, channelid=None,
+            data=None, variable={}, nowait=False, channelid=None,
             otherchannelid=None, codecs=None):
         """Originate call to connect channel to given context/exten/priority
 
@@ -730,7 +731,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
         application -- alternate application to Dial to use for outbound dial
         data -- data to pass to application
         variable -- variables associated to the call
-        async -- make the origination asynchronous
+        nowait -- make the origination asynchronous
         """
         message = [(k, v) for (k, v) in (
             ('action', 'originate'),
@@ -742,7 +743,7 @@ class AMIProtocol(basic.LineOnlyReceiver):
             ('account', account),
             ('application', application),
             ('data', data),
-            ('async', str(async)),
+            ('async', str(nowait)),
             ('channelid', channelid),
             ('otherchannelid', otherchannelid),
             ('codecs', codecs),
