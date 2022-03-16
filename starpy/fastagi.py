@@ -81,7 +81,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
     """
     readingVariables = False
     lostConnectionDeferred = None
-    delimiter = '\n'
+    delimiter = b'\n'
 
     def __init__(self, *args, **named):
         """Initialise the AMIProtocol, arguments are ignored"""
@@ -117,6 +117,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
 
     def lineReceived(self, line):
         """(Internal) Handle Twisted's report of an incoming line from AMI"""
+        line = line.decode("utf-8")
         log.debug('Line In: %r', line)
         if self.readingVariables:
             if not line.strip():
@@ -157,7 +158,7 @@ class FastAGIProtocol(basic.LineOnlyReceiver):
         commandString = commandString.rstrip('\n').rstrip('\r')
         df = defer.Deferred()
         self.pendingMessages.append(df)
-        self.sendLine(commandString)
+        self.sendLine(bytes(commandString,"utf-8"))
         return df
 
     def checkFailure(self, result, failure='-1'):
